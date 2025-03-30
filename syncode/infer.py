@@ -3,7 +3,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 import fire
 import syncode.common as common
 import torch
-from syncode.language_model import HuggingFaceModel
+from syncode.language_model import HuggingFaceModel, AdaptiveGrammarDecoder
 from syncode.grammar_decoder import SyncodeLogitsProcessor
 from typing import Optional, Literal, Union
 from syncode.parsers.grammars import Grammar
@@ -213,6 +213,72 @@ class Syncode:
                 batch_completions = self.model.generate_grammar_constrained_completion(prompt, self.num_samples)
                 for i, completion in enumerate(batch_completions):
                     print(prompt + completion)
+
+class AdaptiveSynCode(Syncode):
+    def __init__(self, model, mode = "grammar_strict", quantize = True, device = "cuda", grammar = None, parse_output_only = True, dev_mode = False, log_level = 1, new_mask_store = False, parser = "lalr", seed = None, opp = True, start_symbol = "<<", start_in_grammar = True, end_symbol = ">>", end_in_grammar = True, **kwargs):
+        # Check inputs
+        assert mode in ["original", "grammar_mask", "grammar_strict"]
+        gen_kwargs = {'max_length', 'max_new_tokens', 'min_length', 'min_new_tokens', 'early_stopping', 'do_sample', 'num_beams', 'use_cache', 'temperature', 'top_k', 'top_p', 'num_return_sequences', 'pad_token_id', 'eos_token_id'}
+        invalid_kwargs = kwargs.keys() - gen_kwargs
+        assert invalid_kwargs == set(), f"Invalid arguments {invalid_kwargs}"
+
+        # Set attributes
+        self.mode = mode
+        self.model_name = model
+        self.quantize = quantize
+        self.device = device
+        self.num_samples = kwargs.get('num_return_sequences', 1)
+        self.new_mask_store = new_mask_store
+        self.parser = parser
+        self.log_level = log_level
+
+        # Set seed
+        if seed is not None:
+            torch.manual_seed(seed)
+
+        self.parse_output_only = parse_output_only
+
+        # Set the grammar
+        self.language = grammar
+        self.grammar = Grammar(grammar) if self.is_grammar_mode() else None
+
+        # Load model
+        model = common.load_model(self.model_name, device, quantize)
+        tokenizer = common.load_tokenizer(self.model_name)
+        
+        # Initialize logit processors
+        self.grammar_decoder = None
+        
+        if self.is_grammar_mode():
+            self.grammar_decoder = SyncodeLogitsProcessor(
+                self.grammar, 
+                tokenizer=tokenizer, 
+                use_cache=(not self.new_mask_store), 
+                parse_output_only=self.parse_output_only,
+                num_samples=self.num_samples, 
+                dev_mode=dev_mode,
+                parser=parser,
+                mode=mode,
+                start_symbol= start_symbol
+                )
+
+        # Set LLM max new tokens to 200 by default
+        kwargs['max_new_tokens'] = kwargs.get('max_new_tokens', 200)
+
+        self.model: AdaptiveGrammarDecoder = AdaptiveGrammarDecoder(
+            model, 
+            grammar=self.grammar,
+            tokenizer=tokenizer, 
+            device=device, 
+            grammar_decoder=self.grammar_decoder, 
+            mode=self.mode,
+            opp=opp,
+            start_symbol=start_symbol,
+            start_in_grammar=start_in_grammar,
+            end_symbol=end_symbol,
+            end_in_grammar=end_in_grammar,
+            **kwargs
+            )
 
 if __name__ == "__main__":
     fire.Fire(compile_and_run)

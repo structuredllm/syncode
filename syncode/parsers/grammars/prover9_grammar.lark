@@ -9,16 +9,16 @@ premise: quantified_expr COMMENT -> define_premise
 conclusion: quantified_expr COMMENT -> define_conclusion
 
 quantified_expr: quantifier VAR "(" expression ")" | expression
-quantifier: "∀" -> forall | "∃" -> exists
+quantifier: "{forall}" -> forall | "{exists}" -> exists
 
 expression: bimplication_expr
 
-?bimplication_expr: implication_expr ("↔" bimplication_expr)?  -> iff
-?implication_expr: xor_expr ("→" implication_expr)?  -> imply
-?xor_expr: or_expr ("⊕" xor_expr)?                -> xor
-?or_expr: and_expr ("∨" or_expr)?                -> or
-?and_expr: neg_expr ("∧" and_expr)?              -> and
-?neg_expr: "¬" quantified_expr                   -> neg 
+?bimplication_expr: implication_expr ("{iff}" bimplication_expr)?  -> iff
+?implication_expr: xor_expr ("{implies}" implication_expr)?  -> imply
+?xor_expr: or_expr ("{xor}" xor_expr)?                -> xor
+?or_expr: and_expr ("{or}" or_expr)?                -> or
+?and_expr: neg_expr ("{and}" and_expr)?              -> and
+?neg_expr: "{not}" quantified_expr                   -> neg 
         | atom
 
 ?atom: PREDICATE "(" VAR ("," VAR)* ")" -> predicate 

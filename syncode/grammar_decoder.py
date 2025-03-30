@@ -31,7 +31,8 @@ class SyncodeLogitsProcessor(LogitsProcessor):
         num_samples=1,
         dev_mode=False,
         parser='lalr',
-        mode='grammar_mask'):
+        mode='grammar_mask', 
+        start_symbol = None):
 
         self.tokenizer = tokenizer
         self.grammar = grammar
@@ -39,6 +40,7 @@ class SyncodeLogitsProcessor(LogitsProcessor):
         self.dev_mode = dev_mode
         self.batch_size = num_samples
         self.parse_failed = False
+        self.start_symbol = start_symbol
 
         # For backtracking to syntactically valid completions
         self.last_valid_state: list = []
@@ -99,6 +101,13 @@ class SyncodeLogitsProcessor(LogitsProcessor):
         else:
             self.start_from = 0
 
+        self.inc_parser.reset()
+    
+    def reset_adaptive(self, start_from):
+        self.last_valid_state = [0 for _ in range(self.batch_size)]
+        self.function_ends = [None for _ in range(self.batch_size)]
+        self.parse_failed = False
+        self.start_from = start_from
         self.inc_parser.reset()
 
 
@@ -182,6 +191,8 @@ class SyncodeLogitsProcessor(LogitsProcessor):
     def _get_partial_codes(self, input_ids: torch.LongTensor):   
         assert self.start_from <= input_ids.size(1), "Make sure that the decoder is reset for new prompt."            
         partial_codes = self.tokenizer.batch_decode(input_ids[:, self.start_from:], skip_special_tokens=True)
+        if self.start_symbol is not None:
+            partial_codes = [self.start_symbol + code for code in partial_codes]
         return partial_codes
 
     def update_valid_state(self, partial_code: str, idx: int, r: ParseResult):
