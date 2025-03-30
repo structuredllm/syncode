@@ -1,0 +1,26 @@
+start: space? "<" "<" space? expr space? ">" ">" space?
+
+expr: expr space? "+" space? term   
+     | expr space? "-" space? term   
+     | term
+
+term: term space? "*" space? factor 
+     | term space? "/" space? factor 
+     | term space? "//" space? factor 
+     | term space? "%" space? factor  
+     | factor space?
+
+factor: "-" space? factor    
+       | TYPE "(" space? expr space? ")" 
+       | primary space?
+
+primary: NUMBER        
+        | VARIABLE      
+        | "(" space? expr space? ")"
+
+TYPE.4: "int"
+
+space: " "
+
+%import common.CNAME -> VARIABLE
+%import common.NUMBER
