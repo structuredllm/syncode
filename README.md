@@ -207,7 +207,7 @@ export HF_ACCESS_TOKEN="your_huggingface_api_key"
 
 - `task_id` (int, optional): Problem task id for selecting a problem from a Dataset.
 
-- `use_auto` (bool, optional): Use auto device mapping. Defaults to False.
+- `use_auto_device_mapping` (bool, optional): Use auto device mapping. Defaults to False.
 - `kwargs`(void, optional): Currently supported `kwargs` are `max_length`, `max_new_tokens`, `min_length`, `min_new_tokens`, `early_stopping`, `do_sample`, `num_beams`, `use_cache`, `temperature`, `top_k`, `top_p`, `num_return_sequences`, `pad_token_id`, and `eos_token_id`. Refer to the [HuggingFace Text Generation Documentation](https://huggingface.co/docs/transformers/en/main_classes/text_generation) for more information.
 
   
@@ -238,7 +238,7 @@ python3 syncode/infer.py
     --new_mask_store [True, False]
     --parser ["lr", "lalr"]
     --task_id [task_id]
-    --use_auto [True, False]
+    --use_auto_device_mapping [True, False]
 ```
 </details>
 
