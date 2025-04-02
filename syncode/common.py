@@ -11,16 +11,22 @@ SYNCODE_CACHE = os.environ['SYNCODE_CACHE'] if 'SYNCODE_CACHE' in os.environ els
 HF_ACCESS_TOKEN = os.environ['HF_ACCESS_TOKEN'] if 'HF_ACCESS_TOKEN' in os.environ else None
 
 
-def load_model(model_name, device, quantize):
+def load_model(model_name, device, quantize, device_map = None):
         if model_name == 'test':
             model = AutoModelForCausalLM.from_pretrained('bigcode/tiny_starcoder_py').to(device)
         elif model_name == 'test-instruct':
             model = AutoModelForCausalLM.from_pretrained("rahuldshetty/tiny-starcoder-instruct")
         else:
-            if (quantize):
-                model = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype=torch.bfloat16, cache_dir=HF_CACHE, token=HF_ACCESS_TOKEN, trust_remote_code=True).eval().to(device)
+            if device_map is not None:
+                if (quantize):
+                    model = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype=torch.bfloat16, cache_dir=HF_CACHE, token=HF_ACCESS_TOKEN, trust_remote_code=True, device_map = device_map).eval()
+                else:
+                    model = AutoModelForCausalLM.from_pretrained(model_name, cache_dir=HF_CACHE, token=HF_ACCESS_TOKEN, trust_remote_code=True, device_map = device_map).eval()
             else:
-                model = AutoModelForCausalLM.from_pretrained(model_name, cache_dir=HF_CACHE, token=HF_ACCESS_TOKEN, trust_remote_code=True).eval().to(device)
+                if (quantize):
+                    model = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype=torch.bfloat16, cache_dir=HF_CACHE, token=HF_ACCESS_TOKEN, trust_remote_code=True).eval().to(device)
+                else:
+                    model = AutoModelForCausalLM.from_pretrained(model_name, cache_dir=HF_CACHE, token=HF_ACCESS_TOKEN, trust_remote_code=True).eval().to(device)
         return model
 
 def load_tokenizer(model_name):
