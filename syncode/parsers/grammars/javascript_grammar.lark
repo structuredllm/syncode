@@ -1,0 +1,261 @@
+// Adapted from: https://github.com/lassi-niruvanam/lassi-ilakkanangal
+ // The MIT License (MIT)
+//
+ // Copyright (c) 2014 by Bart Kiers (original author) and Adrian Herrera
+ // (contributor -> ported to Python)
+//
+ // Permission is hereby granted, free of charge, to any person
+ // obtaining a copy of this software and associated documentation
+ // files (the "Software"), to deal in the Software without
+ // restriction, including without limitation the rights to use,
+ // copy, modify, merge, publish, distribute, sublicense, and/or sell
+ // copies of the Software, and to permit persons to whom the
+ // Software is furnished to do so, subject to the following
+ // conditions:
+//
+ // The above copyright notice and this permission notice shall be
+ // included in all copies or substantial portions of the Software.
+//
+ // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ // EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ // OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ // NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ // HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ // OTHER DEALINGS IN THE SOFTWARE.
+ //
+
+start: source_elements?
+
+source_elements: statement+
+
+statement: block
+    | variable_statement
+    | empty_statement
+    | expression_statement
+    | if_statement
+    | iteration_statement
+    | continue_statement
+    | break_statement
+    | return_statement
+    | with_statement
+    | labelled_statement
+    | switch_statement
+    | throw_statement
+    | try_statement
+    | debugger_statement
+
+// For now assuming that the block will not be empty. This is to avoid reduce/reduce conflict with empty object
+block: OPEN_BRACE statement_list CLOSE_BRACE  
+
+empty_braces: OPEN_BRACE CLOSE_BRACE
+
+statement_list: statement+
+
+variable_decl_type: "var" | "let" | "const"
+
+variable_statement : variable_decl_type variable_declaration_list
+
+variable_declaration_list: variable_declaration ( COMMA variable_declaration )*
+
+variable_declaration : IDENTIFIER initialiser?
+
+initialiser : ASSIGN single_expression
+
+empty_statement : EOS
+
+expression_statement: expression_sequence
+
+if_statement: "if" OPEN_PAREN expression_sequence CLOSE_PAREN statement ( "else" statement )?
+
+iteration_statement: "do" statement "while" OPEN_PAREN expression_sequence CLOSE_PAREN -> do_statement
+    | "while" OPEN_PAREN expression_sequence CLOSE_PAREN statement                                                        -> while_statement
+    | "for" OPEN_PAREN expression_sequence? EOS expression_sequence? EOS expression_sequence? CLOSE_PAREN statement         -> for_statement
+    | "for" OPEN_PAREN variable_decl_type variable_declaration_list EOS expression_sequence? EOS expression_sequence? CLOSE_PAREN statement -> for_var_statement
+    | "for" OPEN_PAREN single_expression "in" expression_sequence CLOSE_PAREN statement                                      -> for_in_statement
+    | "for" OPEN_PAREN variable_decl_type variable_declaration "in" expression_sequence CLOSE_PAREN statement                               -> for_var_in_statement
+
+continue_statement : "continue" IDENTIFIER?
+
+break_statement : "break" IDENTIFIER?
+
+return_statement : "return" (expression_sequence)?
+
+with_statement: "with" OPEN_PAREN expression_sequence CLOSE_PAREN statement
+
+switch_statement : "switch" OPEN_PAREN expression_sequence CLOSE_PAREN case_block
+
+case_block : OPEN_BRACE case_clauses? ( default_clause case_clauses? )? CLOSE_BRACE
+
+case_clauses: case_clause+
+
+case_clause: "case" expression_sequence COLON statement_list?
+
+default_clause : "default" COLON statement_list?
+
+labelled_statement : IDENTIFIER COLON statement
+
+throw_statement : "throw" expression_sequence
+
+try_statement : "try" block (catch_production | finally_production | (catch_production finally_production))
+
+catch_production: "catch" OPEN_PAREN IDENTIFIER CLOSE_PAREN block
+
+finally_production: "finally" block
+
+debugger_statement: "debugger"
+
+function_declaration : "function" IDENTIFIER OPEN_PAREN formal_parameter_list? CLOSE_PAREN OPEN_BRACE function_body CLOSE_BRACE
+
+formal_parameter_list: IDENTIFIER ( COMMA IDENTIFIER )*
+
+function_body: source_elements?
+
+class_declaration : "class" IDENTIFIER OPEN_BRACE class_body CLOSE_BRACE
+
+class_body : (method_declaration | property_assignment )*
+
+method_declaration : IDENTIFIER OPEN_PAREN formal_parameter_list? CLOSE_PAREN OPEN_BRACE function_body CLOSE_BRACE
+
+array_literal: OPEN_BRACKET element_list? COMMA? elision? CLOSE_BRACKET
+
+element_list: elision? single_expression ( COMMA elision? single_expression )*
+
+elision: COMMA+
+
+object_literal: empty_braces
+    | OPEN_BRACE property_name_and_value_list COMMA? CLOSE_BRACE
+
+property_name_and_value_list: property_assignment ( COMMA property_assignment )*
+
+property_assignment: property_name COLON single_expression -> property_expression_assignment
+    | "get" property_name OPEN_PAREN CLOSE_PAREN OPEN_BRACE function_body CLOSE_BRACE -> property_getter
+    | "set" property_name OPEN_PAREN property_set_parameter_list CLOSE_PAREN OPEN_BRACE function_body CLOSE_BRACE -> property_setter
+
+property_name: IDENTIFIER | STRING | numeric_literal
+
+property_set_parameter_list: IDENTIFIER
+
+arguments: OPEN_PAREN argument_list? CLOSE_PAREN
+
+argument_list: single_expression ( COMMA single_expression )*
+
+expression_sequence : single_expression ( COMMA single_expression )*
+
+identifier_expression : IDENTIFIER
+
+single_expression : function_declaration
+    | class_declaration
+    | single_expression OPEN_BRACKET expression_sequence CLOSE_BRACKET -> member_index_expression
+    | single_expression DOT identifier_expression -> member_dot_expression
+    | single_expression arguments -> arguments_expression
+    | single_expression PLUS_PLUS -> post_increment_expression
+    | single_expression MINUS_MINUS -> post_decrease_expression
+    | ("new" | "delete" | "void" | "typeof" | PLUS_PLUS | MINUS_MINUS | PLUS | MINUS | BIT_NOT | NOT) single_expression -> unary_expression
+    | single_expression ( MULTIPLY | DIVIDE | MODULUS ) single_expression -> multiplicative_expression
+    | single_expression ( PLUS | MINUS ) single_expression -> additive_expression
+    | single_expression ( LEFT_SHIFT_ARITHMETIC | RIGHT_SHIFT_ARITHMETIC | RIGHT_SHIFT_LOGICAL ) single_expression -> bit_shift_expression
+    | single_expression ( LESS_THAN | GREATER_THAN | LESS_THAN_EQUALS | GREATER_THAN_EQUALS ) single_expression -> relational_expression
+    | single_expression "instanceof" single_expression -> instanceof_expression
+    | single_expression "in" single_expression -> in_expression
+    | single_expression ( EQUALS | NOT_EQUALS | IDENTITY_EQUALS | IDENTIFY_NOT_EQUALS ) single_expression -> equality_expression
+    | single_expression BIT_AND single_expression -> bit_and_expression
+    | single_expression BIT_XOR single_expression -> bit_xor_expression
+    | single_expression BIT_OR single_expression -> bit_or_expression
+    | single_expression AND single_expression -> logical_and_expression
+    | single_expression OR single_expression -> logical_or_expression
+    | single_expression QUESTIONMARK single_expression COLON single_expression -> ternary_expression
+    | single_expression ASSIGN expression_sequence -> assignment_expression
+    | single_expression assignment_operator expression_sequence -> assignment_operator_expression
+    | "this" -> this_expression
+    | identifier_expression
+    | literal -> literal_expression
+    | array_literal -> array_literal_expression
+    | object_literal -> object_literal_expression
+    | "(" expression_sequence ")" -> parenthesized_expression
+
+assignment_operator : MULTIPLY_ASSIGN
+    | DIVIDE_ASSIGN
+    | MODULUS_ASSIGN
+    | PLUS_ASSIGN
+    | MINUS_ASSIGN
+    | LEFT_SHIFT_ARITHMETIC_ASSIGN
+    | RIGHT_SHIFT_ARITHMETIC_ASSIGN
+    | RIGHT_SHIFT_LOGICAL_ASSIGN
+    | BIT_AND_ASSIGN
+    | BIT_XOR_ASSIGN
+    | BIT_OR_ASSIGN
+
+literal: NULL_LITERAL | BOOLEAN_LITERAL | STRING | numeric_literal
+
+numeric_literal: DEC_NUMBER | HEX_NUMBER | OCT_NUMBER | FLOAT_NUMBER
+
+OPEN_BRACKET : "["
+CLOSE_BRACKET : "]"
+OPEN_PAREN : "("
+CLOSE_PAREN : ")"
+OPEN_BRACE : "{"
+CLOSE_BRACE : "}"
+SEMICOLON : ";"
+COMMA : ","
+ASSIGN : "="
+QUESTIONMARK : "?"
+COLON : ":"
+DOT : "."
+PLUS_PLUS : "++"
+MINUS_MINUS : "--"
+PLUS : "+"
+MINUS : "-"
+BIT_NOT : "~"
+NOT : "!"
+MULTIPLY : "*"
+DIVIDE : "/"
+MODULUS : "%"
+RIGHT_SHIFT_ARITHMETIC : ">>"
+LEFT_SHIFT_ARITHMETIC : "<<"
+RIGHT_SHIFT_LOGICAL : ">>>"
+LESS_THAN : "<"
+GREATER_THAN : ">"
+LESS_THAN_EQUALS : "<="
+GREATER_THAN_EQUALS : ">="
+EQUALS : "=="
+NOT_EQUALS : "!="
+IDENTITY_EQUALS : "==="
+IDENTIFY_NOT_EQUALS : "!=="
+BIT_AND : "&"
+BIT_XOR : "^"
+BIT_OR : "|"
+AND : "&&"
+OR : "||"
+MULTIPLY_ASSIGN : "*="
+DIVIDE_ASSIGN : "/="
+MODULUS_ASSIGN : "%="
+PLUS_ASSIGN : "+="
+MINUS_ASSIGN : "-="
+LEFT_SHIFT_ARITHMETIC_ASSIGN : "<<="
+RIGHT_SHIFT_ARITHMETIC_ASSIGN : ">>="
+RIGHT_SHIFT_LOGICAL_ASSIGN : ">>>="
+BIT_AND_ASSIGN : "&="
+BIT_XOR_ASSIGN : "^="
+BIT_OR_ASSIGN : "|="
+
+NULL_LITERAL: "null"
+BOOLEAN_LITERAL: "true" | "false"
+
+DEC_NUMBER: /0|[1-9]\d*/i
+HEX_NUMBER: /0x[\da-f]*/i
+OCT_NUMBER: /0o[0-7]*/i
+BIN_NUMBER : /0b[0-1]*/i
+FLOAT_NUMBER: /((\d+\.\d*|\.\d+)(e[-+]?\d+)?|\d+(e[-+]?\d+))/i
+NEWLINE: ( /\r?\n[\t ]*/ )+
+EOS: (NEWLINE+ | SEMICOLON)
+STRING: /`.*?`/ | /".*?"/i | /'.*?'/i
+
+IDENTIFIER: NAME
+NAME: /[a-zA-Z_]\w*/
+COMMENT: /\/\/.*/ | /\/\*.*?\*\//s
+
+%ignore /[\r\u2028\u2029]/  // LINETERMINATOR
+%ignore /[\t \f]+/  // WS
+%ignore COMMENT
