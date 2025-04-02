@@ -50,7 +50,7 @@ class HuggingFaceModel:
         self.prompt_template = prompt_template
         self.model: PreTrainedModel = model
         self.tokenizer = tokenizer
-        self.device = device
+        self.device = self.model.device
         self.best_of = best_of
         self._before_prediction_hook = before_prediction_hook
         self.logits_processor = grammar_decoder
