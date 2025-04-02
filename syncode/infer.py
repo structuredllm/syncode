@@ -50,7 +50,7 @@ class Syncode:
         parser: Literal["lr", "lalr"] = "lalr",
         seed: Optional[int] = None,
         opp: bool = True,
-        use_auto_device_mapping: bool = False,
+        device_map: Optional[str] = None,
         **kwargs
     ):  
         # Check inputs
@@ -86,7 +86,7 @@ class Syncode:
         self.grammar = Grammar(grammar) if self._is_grammar_mode() else None
 
         # Load model and tokenizer
-        model = common.load_model(self.model_name, device, quantize, use_auto_device_mapping)
+        model = common.load_model(self.model_name, device, quantize, device_map)
         tokenizer = common.load_tokenizer(self.model_name)
         
         # Initialize grammar decoder if needed
@@ -260,7 +260,7 @@ def main(
     parse_output_only: bool = True,
     prompt_type: str = 'original',
     format_tabs: bool = False,
-    use_auto_device_mapping: bool = False,
+    device_map: Optional[str] = None,
     **kwargs
 ):
     """Run Syncode with the specified configuration.
@@ -311,7 +311,7 @@ def main(
         seed=seed, 
         opp=opp,
         parse_output_only=parse_output_only,
-        use_auto_device_mapping=use_auto_device_mapping,
+        device_map=device_map,
         **kwargs
     )
     
