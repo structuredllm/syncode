@@ -380,6 +380,7 @@ class Scanner:
             except AssertionError:  # Yes, this is what Python provides us.. :/
                 return self._build_mres(terminals, max_size // 2)
 
+            # print(f"Built regex with {pattern}")
             mres.append(mre)
             terminals = terminals[max_size:]
         return mres

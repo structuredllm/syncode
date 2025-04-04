@@ -10,3 +10,4 @@ cache/
 *.prof
 dist/
 syncode.egg-info/
+syncode/parsers/rust_parser/target/*

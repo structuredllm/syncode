@@ -11,6 +11,7 @@ def create_parser(
           grammar: Grammar, 
           parser='lalr', 
           use_symbol_pos_map=False,
+          use_rust=False,
           **kwargs
         ) -> incremental_parser.IncrementalParser:   
         """ 

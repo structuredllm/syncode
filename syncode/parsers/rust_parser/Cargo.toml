@@ -1,0 +1,27 @@
+[package]
+name = "rust_parser"
+version = "0.1.1"
+edition = "2024"
+
+[lib]
+name = "rust_parser"
+# For normal Python extension builds
+crate-type = ["cdylib"]
+
+[dependencies]
+regex = "1.7.0"
+regex-automata = "0.4.9"
+pyo3 = { version = "0.18.3", features = ["extension-module"] }
+
+[dev-dependencies]
+# For testing we need different features
+pyo3 = { version = "0.18.3", features = ["auto-initialize"] }
+
+# This is the key part for testing PyO3 code
+[features]
+# Add a special feature for testing
+extension-module = ["pyo3/extension-module"]
+default = ["extension-module"]
+
+[profile.release]
+debug = true
