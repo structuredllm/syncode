@@ -231,6 +231,7 @@ impl<S: Clone + Eq + Hash + std::fmt::Debug> Parser<S> {
     
     // Parse tokens without building a tree, just validating
     pub fn parse(&self, tokens: &[LexResult]) -> Result<ParseResult, ParserError> {
+        let start_time = std::time::Instant::now();
         let mut state = ParserState::new(self.conf.clone());
         let token_count = tokens.len();
         
@@ -246,6 +247,7 @@ impl<S: Clone + Eq + Hash + std::fmt::Debug> Parser<S> {
                         // If last token then we should return the last token else we continue
                         Ok(()) => {
                             if is_last {
+                                eprintln!("Parsing completed in {:?}", start_time.elapsed());
                                 return Ok(ParseResult { success: true, consumed: state.last_pos });
                             } else {
                                 continue;
@@ -287,6 +289,7 @@ impl<S: Clone + Eq + Hash + std::fmt::Debug> Parser<S> {
                 }
             }
         }
+        
         
         // If we get here, we've consumed all tokens but not accepted
         Ok(ParseResult { success: false, consumed: state.last_pos })
@@ -350,104 +353,5 @@ impl fmt::Display for ParserError {
                 write!(f, "Parser configuration error: {}", msg)
             },
         }
-    }
-}
-
-// Helper to load an LR(1) table from serialized format
-pub fn load_lr1_table<S: Clone + Eq + Hash + std::fmt::Debug>(
-    states_dict: &HashMap<String, HashMap<String, (String, String)>>,
-    start: &str,
-    state_from_string: fn(&str) -> S,
-    rules: &HashMap<usize, Rule>,
-) -> ParseTable<S> {
-    let mut table = ParseTable::new();
-    
-    // Setup start and end states based on the start symbol
-    // These are typically known from the grammar structure
-    let start_state = state_from_string("9");  // Use state 9 for start by default
-    let end_state = state_from_string("27");   // Use state 27 for end by default
-    
-    table.start_states.insert(start.to_string(), start_state);
-    table.end_states.insert(start.to_string(), end_state);
-
-    // Convert serialized states to a ParseTable
-    for (state_str, transitions) in states_dict {
-        let state = state_from_string(state_str);
-        let mut state_transitions = HashMap::new();
-
-        for (symbol, (action_type, action_value)) in transitions {
-            let action = match action_type.as_str() {
-                "shift" => Action::Shift(state_from_string(&action_value)),
-                "reduce" => {
-                    let rule_id = action_value.parse::<usize>().unwrap();
-                    Action::Reduce(rules.get(&rule_id).unwrap().clone())
-                },
-                // "accept" => Action::Accept,
-                _ => Action::Error,
-            };
-
-            state_transitions.insert(symbol.clone(), action);
-        }
-
-        table.states.insert(state, state_transitions);
-    }
-
-    table
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::collections::HashMap;
-
-    #[test]
-    fn test_simple_parser() {
-        // Define a simple grammar for testing
-        // E -> E + T | T
-        // T -> T * F | F
-        // F -> ( E ) | id
-
-        // Create rules
-        let mut rules = HashMap::new();
-        rules.insert(1, Rule::new(1, "E".to_string(), vec!["E".to_string(), "+".to_string(), "T".to_string()]));
-        rules.insert(2, Rule::new(2, "E".to_string(), vec!["T".to_string()]));
-        rules.insert(3, Rule::new(3, "T".to_string(), vec!["T".to_string(), "*".to_string(), "F".to_string()]));
-        rules.insert(4, Rule::new(4, "T".to_string(), vec!["F".to_string()]));
-        rules.insert(5, Rule::new(5, "F".to_string(), vec!["(".to_string(), "E".to_string(), ")".to_string()]));
-        rules.insert(6, Rule::new(6, "F".to_string(), vec!["ID".to_string()]));
-
-        // We would normally load from a serialized table
-        // For testing, let's create a simple table manually
-        
-        // This is just a placeholder - a real implementation would have a proper table
-        // For a complete parser, this would be generated from grammar analysis
-        let serialized_table = HashMap::new();
-        
-        // In a real implementation, populate this with actual states and transitions
-        
-        // Create state mapping function
-        fn state_from_string(s: &str) -> usize {
-            s.parse::<usize>().unwrap()
-        }
-        
-        // Define start and end states
-        let mut start_states = HashMap::new();
-        start_states.insert("E".to_string(), 0);
-        
-        let mut end_states = HashMap::new();
-        end_states.insert("E".to_string(), 1);
-        
-        // Load parse table
-        let table = load_lr1_table(&serialized_table, "E", state_from_string, &rules);
-        
-        // Create parser configuration
-        let conf = ParseConf::new(table, "E".to_string()).unwrap();
-        
-        // Create parser
-        let parser = Parser::new(conf);
-        
-        // This is where we would test the parser with actual tokens
-        // since we don't have a complete parse table, we'll just check the structure
-        assert_eq!(parser.conf.start, "E");
     }
 }

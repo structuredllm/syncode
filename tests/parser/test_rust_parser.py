@@ -49,7 +49,70 @@ class TestParserRS(unittest.TestCase):
         
         self.assertTrue(success, "Parsing should succeed")
         self.assertEqual(remaining, "", "The entire input should be consumed")
+    
+
+    def test_parser_performance(self):
+        """Profile and compare the performance of Rust and Lark parsers"""
+        print("-"*40)
+        print("PARSER PERFORMANCE TEST")
+        print("-"*40)
         
+        # Load parsers
+        lark_parser = create_base_parser(Grammar("json"))
+        # interpreter_parser = create_parser(Grammar("json"))
+        rust_parser = ParserRS(lark_parser)
+        
+        # Generate large JSON string with multiple nested objects and arrays
+        json_string = self.generate_large_json(size=10)  # Same size as used in lexer test
+        print(f"Generated JSON string of length: {len(json_string)}")
+        
+        # Test parsing multiple times for stability
+        iterations = 3
+        lark_times = []
+        rust_times = []
+        
+        print(f"Running {iterations} iterations for each parser...")
+        
+        # Profile Lark parser (multiple runs)
+        for i in range(iterations):
+            start_time = time.time()
+            lark_result = lark_parser.parse(json_string)
+            end_time = time.time()
+            lark_time = end_time - start_time
+            lark_times.append(lark_time)
+            print(f"Lark parser iteration {i+1}: {lark_time:.4f} seconds")
+        
+        # Profile Rust parser (multiple runs)
+        for i in range(iterations):
+            start_time = time.time()
+            success, remaining = rust_parser.parse_text(json_string)
+            end_time = time.time()
+            rust_time = end_time - start_time
+            rust_times.append(rust_time)
+            print(f"Rust parser iteration {i+1}: {rust_time:.4f} seconds")
+            self.assertTrue(success, f"Rust parser failed to parse on iteration {i+1}")
+            self.assertEqual(remaining, "", f"Rust parser didn't consume all input on iteration {i+1}")
+        
+        # Calculate average times
+        avg_lark_time = sum(lark_times) / len(lark_times)
+        avg_rust_time = sum(rust_times) / len(rust_times)
+        
+        # Print results summary
+        print("\nRESULTS SUMMARY:")
+        print(f"Average Lark parser time: {avg_lark_time:.4f} seconds")
+        print(f"Average Rust parser time: {avg_rust_time:.4f} seconds")
+        
+        # Calculate speedup
+        speedup = avg_lark_time / avg_rust_time if avg_rust_time > 0 else float('inf')
+        print(f"Rust parser speedup: {speedup:.2f}x")
+        
+        # Memory usage would also be interesting but harder to measure precisely
+        
+        # Assert that Rust parser is faster (if you expect it to be)
+        self.assertLess(avg_rust_time, avg_lark_time, 
+                    "Rust parser should be faster than Lark parser")
+        print("-"*40)
+
     def test_simple_lexing(self):
         """Test simple lexing with basic tokens"""
         # Create terminal definitions with a mix of "re" and "str" patterns
