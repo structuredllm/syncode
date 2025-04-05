@@ -6,7 +6,7 @@ import sys, os
 from typing import Set
 sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../..')
 from syncode.parsers.grammars.grammar import Grammar
-from syncode.parsers.lexer_rs import LexerRS
+from syncode.parsers.parser_rs import LexerRS, ParserRS
 from syncode.parsers import create_parser, create_base_parser
 
 # Setup logging
@@ -39,8 +39,17 @@ class MockLexerConf:
         self.use_bytes = use_bytes
         self.terminals_by_name = {t.name: t for t in terminals}
 
-class TestLexerRS(unittest.TestCase):
-    
+class TestParserRS(unittest.TestCase):
+    def test_rust_parser(self):
+        json_parser = create_base_parser(Grammar("json"))
+        rust_parser = ParserRS(json_parser)
+
+        simple_json = '{"name": "John", "age": 30, "is_student": false}'
+        success, remaining = rust_parser.parse_text(simple_json)
+        
+        self.assertTrue(success, "Parsing should succeed")
+        self.assertEqual(remaining, "", "The entire input should be consumed")
+        
     def test_simple_lexing(self):
         """Test simple lexing with basic tokens"""
         # Create terminal definitions with a mix of "re" and "str" patterns
