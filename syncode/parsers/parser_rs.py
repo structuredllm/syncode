@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Tuple
 
 import sys, os
 
-from syncode.larkm.parsers.lalr_analysis import ParseTable
+from syncode.larkm.parsers.lalr_analysis import ParseTable, Reduce, Shift
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 from syncode.larkm.common import LexerConf, ParserConf
 from syncode.larkm.lexer import Token
@@ -33,8 +33,10 @@ class ParserRS:
         
         # Extract and convert rules for Rust parser
         rules = []
+        rule_to_id = {}
         for rule_id, rule in enumerate(parser_conf.rules):
             rules.append((rule_id, rule.origin.name, [s.name for s in rule.expansion]))
+            rule_to_id[rule] = rule_id
         
         # Extract the parsing tables
         states_dict = {}
@@ -42,14 +44,13 @@ class ParserRS:
             state_transitions = {}
             for symbol, (action, arg) in state_actions.items():
                 # Convert action to format expected by Rust
-                if action == 'shift':
+                if action == Shift:
                     state_transitions[symbol] = ('shift', str(arg))
-                elif action == 'reduce':
-                    state_transitions[symbol] = ('reduce', str(arg.rule_id))
-                elif action == 'accept':
-                    state_transitions[symbol] = ('accept', '')
-                else:
-                    state_transitions[symbol] = ('error', '')
+                elif action == Reduce:
+                    rule_id = rule_to_id[arg]
+                    state_transitions[symbol] = ('reduce', str(rule_id))
+                # else:
+                #     state_transitions[symbol] = ('error', '')
             
             states_dict[str(state_idx)] = state_transitions
         
@@ -57,14 +58,18 @@ class ParserRS:
         ignore_types = set(lexer_conf.ignore) if not isinstance(lexer_conf.ignore, set) else lexer_conf.ignore
         
         # Create the Rust parser
+        start_symbol = parser_conf.start[0]
         self._rust_parser = RustParser()
         self._rust_parser.initialize(
             terminal_defs,
             ignore_types,
             lexer_conf.use_bytes if hasattr(lexer_conf, 'use_bytes') else False,
             rules,
-            states_dict, 
-            parser_conf.start[0]
+            states_dict,
+            # We assume there is a single start symbol
+            start_symbol,
+            parse_table.start_states[start_symbol],
+            parse_table.end_states[start_symbol],
         )
     
     def parse_text(self, text, start=None) -> Tuple[bool, str]:

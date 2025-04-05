@@ -311,6 +311,8 @@ impl RustParser {
         rules: Vec<(usize, String, Vec<String>)>, // (id, origin, expansion)
         states_dict: &PyDict,
         start_symbol: String,
+        start_state: usize,
+        end_state: usize,
     ) -> PyResult<()> {
         // Process terminal definitions for the lexer
         let mut terminals = Vec::new();        
@@ -392,6 +394,8 @@ impl RustParser {
             let mut state_transitions = HashMap::new();
             
             for (symbol, action_obj) in transitions_dict.iter() {
+                // eprintln!("State: {}, Symbol: {}", state_idx, symbol);
+                // eprintln!("Action: {:?}", action_obj);
                 let symbol_str = symbol.extract::<String>()?;
                 let action_tuple = action_obj.extract::<(String, String)>()?;
                 state_transitions.insert(symbol_str, action_tuple);
@@ -401,7 +405,7 @@ impl RustParser {
         }
         
         // Create the parse table
-        let parse_table = util::load_parse_table(&self.rules, rust_states_dict, &start_symbol);
+        let parse_table = util::load_parse_table(&self.rules, rust_states_dict, &start_symbol, start_state, end_state);
         
         // Create parser configuration
         match ParseConf::new(parse_table, start_symbol) {

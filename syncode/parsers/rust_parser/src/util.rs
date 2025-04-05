@@ -5,13 +5,11 @@ use crate::parser::{Action, ParseTable, Rule};
 pub fn load_parse_table(
     rules: &HashMap<usize, Rule>,
     states_dict: HashMap<String, HashMap<String, (String, String)>>, 
-    start: &str
+    start: &str,
+    start_state: usize,
+    end_state: usize,
 ) -> ParseTable<usize> {
     let mut table = ParseTable::<usize>::new();
-    
-    // Setup start and end states based on the start symbol
-    let start_state = 9;  // Use state 9 for start by default
-    let end_state = 27;   // Use state 27 for end by default
     
     table.start_states.insert(start.to_string(), start_state);
     table.end_states.insert(start.to_string(), end_state);
@@ -22,6 +20,8 @@ pub fn load_parse_table(
         let mut state_transitions = HashMap::new();
         
         for (symbol, (action_type, action_value)) in transitions {
+            // eprintln!("Action: '{}' -> '{}'", action_type, action_value);
+
             let action = match action_type.as_str() {
                 "shift" => Action::Shift(action_value.parse::<usize>().unwrap_or(0)),
                 "reduce" => {
@@ -33,7 +33,7 @@ pub fn load_parse_table(
                         Action::Reduce(Rule::new(rule_id, "unknown".to_string(), vec![]))
                     }
                 },
-                "accept" => Action::Accept,
+                // "accept" => Action::Accept,
                 _ => Action::Error,
             };
             

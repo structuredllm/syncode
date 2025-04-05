@@ -39,7 +39,6 @@ impl fmt::Display for Rule {
 pub enum Action<S: std::fmt::Debug> {
     Shift(S),
     Reduce(Rule),
-    Accept,
     Error,
 }
 
@@ -134,7 +133,7 @@ impl<S: Clone + Eq + Hash + std::fmt::Debug> ParserState<S> {
     }
 
     // Feed a token to the parser and process it according to the LR(1) algorithm
-    pub fn feed_token(&mut self, token: &Token, is_end: bool) -> Result<bool, ParserError> {
+    pub fn feed_token(&mut self, token: &Token) -> Result<(), ParserError> {
         let state_stack = &mut self.state_stack;
         let end_state = &self.parse_conf.end_state;
         let states = &self.parse_conf.parse_table.states;
@@ -166,12 +165,16 @@ impl<S: Clone + Eq + Hash + std::fmt::Debug> ParserState<S> {
                     });
                 }
             };
+            
+            // eprintln!("Current state: {:?}, Token: {:?}", state, token);
+            // eprintln!("Action: {:?}", action);
+            // eprintln!("Transitions: {:?}", states.get(&state));
 
             match action {
                 Action::Shift(next_state) => {
                     // Just push next state on shift
                     state_stack.push(next_state);
-                    return Ok(false); // Not yet accepted
+                    return Ok(()); // Not yet accepted
                 },
                 Action::Reduce(rule) => {
                     // On a reduce, pop states according to the rule expansion length
@@ -198,20 +201,11 @@ impl<S: Clone + Eq + Hash + std::fmt::Debug> ParserState<S> {
                     
                     if let Action::Shift(next_state) = next_action {
                         state_stack.push(next_state.clone());
-                        
-                        // Check if we've reached the end state
-                        if is_end && state_stack.last().unwrap() == end_state {
-                            return Ok(true);  // Parsing successful
-                        }
                     } else {
                         return Err(ParserError::InvalidAction(format!(
                             "Expected Shift after reduce, got {:?}", next_action
                         )));
                     }
-                },
-                Action::Accept => {
-                    // Accept means we're done parsing
-                    return Ok(true);  // Parsing successful
                 },
                 Action::Error => {
                     return Err(ParserError::SyntaxError(format!(
@@ -247,10 +241,26 @@ impl<S: Clone + Eq + Hash + std::fmt::Debug> Parser<S> {
             match lex_result {
                 LexResult::Token(token) => {
                     let is_last = i == token_count - 1;
-                    match state.feed_token(token, is_last) {
-                        Ok(true) => return Ok(ParseResult { success: true, consumed: state.last_pos }),
-                        Ok(false) => continue, // Keep parsing
-                        Err(e) => return Err(e),
+
+                    match state.feed_token(token) {
+                        // If last token then we should return the last token else we continue
+                        Ok(()) => {
+                            if is_last {
+                                return Ok(ParseResult { success: true, consumed: state.last_pos });
+                            } else {
+                                continue;
+                            }
+                        },
+
+                        // if there is an error during last token then we return the last token and success true
+                        // else we return the error
+                        Err(e) => {
+                            if is_last {
+                                return Ok(ParseResult { success: true, consumed: state.last_pos });
+                            } else {
+                                return Err(e);
+                            }
+                        }
                     }
                 },
                 LexResult::Error { error_type, pos, line, column, allowed: _, char } => {
@@ -274,12 +284,6 @@ impl<S: Clone + Eq + Hash + std::fmt::Debug> Parser<S> {
                         end_line: *line,
                         end_column: *column,
                     };
-                    
-                    match state.feed_token(&eof_token, true) {
-                        Ok(true) => return Ok(ParseResult { success: true, consumed: state.last_pos }),
-                        Ok(false) => continue,
-                        Err(e) => return Err(e),
-                    }
                 }
             }
         }
@@ -378,7 +382,7 @@ pub fn load_lr1_table<S: Clone + Eq + Hash + std::fmt::Debug>(
                     let rule_id = action_value.parse::<usize>().unwrap();
                     Action::Reduce(rules.get(&rule_id).unwrap().clone())
                 },
-                "accept" => Action::Accept,
+                // "accept" => Action::Accept,
                 _ => Action::Error,
             };
 
