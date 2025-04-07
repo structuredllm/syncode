@@ -1,3 +1,4 @@
+accelerate
 fire
 interegular
 regex==2023.8.8

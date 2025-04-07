@@ -176,7 +176,11 @@ class HuggingFaceModel:
             raise ValueError("Prompt should be either a string or a list! It is currently of type: "+str(type(prompt)))
 
         input_batch = [prompt_str for _ in range(batch_size)]
-        inputs = self.tokenizer(input_batch, return_tensors="pt").to(self.model.device)
+        inputs = self.tokenizer(
+            input_batch, 
+            return_tensors="pt",
+            pad_to_multiple_of=8,
+            ).to(self.model.device)
 
         return inputs
 
