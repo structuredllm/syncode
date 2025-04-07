@@ -35,6 +35,18 @@ class Syncode:
         parser (str, optional): Parser to use. Defaults to "lalr". Options are "lr" and "lalr".
         seed (int, optional): Random seed for reproducibility. Defaults to None.
         opp (bool, optional): Whether to use opportunistic generation. Defaults to True.
+        device_map (str, optional): Device map for model loading. Defaults to None.
+
+        start_delim (str, optional): Start delimiter marking the beginning of structured 
+        (grammar-constrained) content.
+        end_delim (str, optional): End delimiter marking the end of structured content. 
+    
+        NOTE: These delimiters are used to extract structured regions for parsing and grammar enforcement. 
+        See *CRANE: Reasoning with Constrained LLM Generation* 
+        ([arXiv:2502.09061](https://arxiv.org/abs/2502.09061)) for more details.
+        Example: `start_delim="```python\n"` and `end_delim="```"` would parse only 
+        the content between these markers.
+
         **kwargs: Additional arguments passed to the model for generation.
     """
     def __init__(
@@ -51,6 +63,8 @@ class Syncode:
         seed: Optional[int] = None,
         opp: bool = True,
         device_map: Optional[str] = None,
+        start_delim: Optional[str] = None,
+        end_delim: Optional[str] = None,
         **kwargs
     ):  
         # Check inputs
@@ -102,6 +116,8 @@ class Syncode:
                 dev_mode=dev_mode,
                 parser=parser,
                 mode=mode,
+                start_delim=start_delim,
+                end_delim=end_delim,
             )
 
         # Set default max new tokens if not provided

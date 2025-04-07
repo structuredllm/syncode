@@ -29,7 +29,10 @@ class SyncodeLogitsProcessor(LogitsProcessor):
         num_samples=1,
         dev_mode=False,
         parser='lalr',
-        mode='grammar_mask'):
+        mode='grammar_mask',
+        start_delim=None,
+        end_delim=None
+        ):
 
         self.tokenizer = tokenizer
         self.byte_tokenizer = ByteTokenizer(tokenizer)
@@ -44,7 +47,9 @@ class SyncodeLogitsProcessor(LogitsProcessor):
             batch_size=num_samples,
             dev_mode=dev_mode,
             parser=parser,
-            mode=mode
+            mode=mode,
+            start_delim=start_delim,
+            end_delim=end_delim
         )
 
     def reset(self):

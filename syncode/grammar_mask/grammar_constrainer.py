@@ -1,6 +1,7 @@
+from typing import Optional, Tuple
 import torch
-import syncode.common as common
-from transformers import LogitsProcessor, PreTrainedTokenizer
+import re
+from transformers import PreTrainedTokenizer
 from syncode.mask_store.byte_tokenizer import ByteTokenizer
 from syncode.parse_result import AcceptSequence, RemainderState
 from syncode.parsers.incremental_parser import IncrementalParser, ParseResult
@@ -43,17 +44,32 @@ class GrammarConstrainer:
     
     For more details on the approximation methods, refer to the SynCode paper:
     https://arxiv.org/abs/2403.01632
+
+
+    start_delim (str, optional): Start delimiter marking the beginning of structured 
+        (grammar-constrained) content.
+        end_delim (str, optional): End delimiter marking the end of structured content. 
+    
+        NOTE: These delimiters are used to extract structured regions for parsing and grammar enforcement. 
+        See *CRANE: Reasoning with Constrained LLM Generation* 
+        ([arXiv:2502.09061](https://arxiv.org/abs/2502.09061)) for more details.
+        Example: `start_delim="```python\n"` and `end_delim="```"` would parse only 
+        the content between these markers.
     """
-    def __init__(self, 
-                grammar: Grammar,
-                tokenizer: PreTrainedTokenizer,
-                byte_tokenizer: ByteTokenizer,
-                use_cache=True,
-                parse_output_only=True,
-                batch_size=1,
-                dev_mode=False,
-                parser='lalr',
-                mode='grammar_mask'):
+    def __init__(
+        self, 
+        grammar: Grammar,
+        tokenizer: PreTrainedTokenizer,
+        byte_tokenizer: ByteTokenizer,
+        use_cache=True,
+        parse_output_only=True,
+        batch_size=1,
+        dev_mode=False,
+        parser='lalr',
+        mode='grammar_mask',
+        start_delim=None,
+        end_delim=None,
+        ):
         
         self.tokenizer = tokenizer
         self.byte_tokenizer = byte_tokenizer
@@ -84,6 +100,10 @@ class GrammarConstrainer:
                                     mode=mode,  # Controls approximation strategy for token masking
                                     )
 
+        # Used for separating the structured content from the rest of the generated text
+        # defaults to None, meaning no delimiters are used
+        self.start_delim = start_delim
+        self.end_delim = end_delim
 
     def reset(self):
         """
@@ -120,11 +140,11 @@ class GrammarConstrainer:
         self._set_start_from(input_ids)
 
         input_ids = torch.cat((input_ids, next_token.unsqueeze(0)), dim=-1)
-        partial_code, remainder_bytes = self._get_partial_codes(input_ids)[0]
+        partial_output, remainder_bytes = self._get_partial_outputs(input_ids)[0]
 
-        res, skip = self._parse_partial_code(
+        res, skip = self._parse_partial_output(
             idx=0, 
-            partial_code=partial_code, 
+            partial_output=partial_output, 
             remainder_bytes=remainder_bytes, 
             accepted_generation=False
             )
@@ -142,7 +162,7 @@ class GrammarConstrainer:
         is_valid = self.dfa_mask_store.is_valid_prefix(res)
 
         if is_valid:
-            self._update_valid_state(partial_code, 0, res)
+            self._update_valid_state(partial_output, 0, res)
 
         return is_valid
 
@@ -163,11 +183,11 @@ class GrammarConstrainer:
             torch.FloatTensor: The masked scores.
         """
         self._set_start_from(input_ids) # start_from is used for choosing where the parsing should start
-        partial_codes = self._get_partial_codes(input_ids)
+        partial_outputs = self._get_partial_outputs(input_ids)
 
-        for idx, (partial_code, remainder_bytes) in enumerate(partial_codes):
+        for idx, (partial_output, remainder_bytes) in enumerate(partial_outputs):
             # 1. Parsing
-            res, skip = self._parse_partial_code(idx, partial_code, remainder_bytes, accepted_generation=True)
+            res, skip = self._parse_partial_output(idx, partial_output, remainder_bytes, accepted_generation=True)
             if skip: continue
 
             # 2. Computing the accept mask
@@ -187,7 +207,7 @@ class GrammarConstrainer:
 
         return scores
 
-    def _parse_partial_code(self, idx: int, partial_code: str, remainder_bytes: bytes, accepted_generation=True) -> tuple[ParseResult, bool]:
+    def _parse_partial_output(self, idx: int, partial_output: str, remainder_bytes: bytes, accepted_generation=True) -> tuple[ParseResult, bool]:
         """
         Parse the partial code and return the result.
         """
@@ -195,7 +215,7 @@ class GrammarConstrainer:
         res = None
         
         try: 
-            res = self.inc_parser.get_acceptable_next_terminals(partial_code)
+            res = self.inc_parser.get_acceptable_next_terminals(partial_output)
 
             if len(remainder_bytes) > 0:
                 res.remainder_state = RemainderState.INCOMPLETE
@@ -203,38 +223,81 @@ class GrammarConstrainer:
             else:
                 res.remainder = res.remainder.encode('utf-8')
 
-            self._update_valid_state(partial_code, idx, res)
+            self._update_valid_state(partial_output, idx, res)
         except Exception as e:
             if self.dev_mode == True and accepted_generation:
                 raise e
             elif self.parse_failed == False and accepted_generation:
                 self.parse_failed = True
                 logger.info("-"*50)
-                logger.info(f"Parsing failed! Falling back to unconstrained decoding.\nException: {e}\nPartial code: {partial_code}\nParsed lexical tokens: {self.inc_parser.parsed_lexer_tokens}")
+                logger.info(f"Parsing failed! Falling back to unconstrained decoding.\nException: {e}\nPartial code: {partial_output}\nParsed lexical tokens: {self.inc_parser.parsed_lexer_tokens}")
                 logger.info("-"*50)
             skip = True
         return res, skip
 
-    def _get_partial_codes(self, input_ids: torch.LongTensor) -> list[(str, bytes)]:
+    def _get_partial_outputs(self, input_ids: torch.LongTensor) -> list[(str, bytes)]:
         """
         Get the partial codes for the input_ids and return the remainder bytes if the partial code is not a valid UTF-8 string.
         """     
         output = []
         for idx in range(len(input_ids)):
             if self.parse_output_only:
-                partial_code, remainder_bytes = self._bytes_to_string(
+                partial_output, remainder_bytes = self._bytes_to_string(
                     self.byte_tokenizer.decode(
                         input_ids[idx, self.start_from:].tolist(), skip_special_tokens=True)
                     )
             else:
-                partial_code, remainder_bytes = self._bytes_to_string(
+                partial_output, remainder_bytes = self._bytes_to_string(
                     self.byte_tokenizer.decode(
                         input_ids[idx].tolist(), skip_special_tokens=True)
                     )
-            output.append((partial_code, remainder_bytes))
+            
+            # Use self.start_delim and self.end_delim to extract the structured content
+            # It is possible that there are multiple start_delim and end_delim in the current input
+            
+
+            output.append((partial_output, remainder_bytes))
         return output
 
-    def _update_valid_state(self, partial_code: str, idx: int, r: ParseResult):
+    @staticmethod
+    def extract_last_structured_block(
+        text: str,
+        start_delim: Optional[str],
+        end_delim: Optional[str]
+    ) -> Tuple[str, bool]:
+        """
+        Extracts the last structured block from `text` between `start_delim` and `end_delim`.
+
+        Returns:
+            (extracted_text: str, should_constrain: bool)
+                - extracted_text: The content of the last delimited block.
+                - should_constrain: True if a start delimiter is present without a matching end,
+                                    meaning structured generation should continue.
+        """
+        if start_delim is None or end_delim is None:
+            return "", False
+
+        # Find all fully enclosed blocks
+        pattern = re.escape(start_delim) + r"(.*?)" + re.escape(end_delim)
+        matches = list(re.finditer(pattern, text, flags=re.DOTALL))
+
+        if matches:
+            last_match = matches[-1]
+            return last_match.group(1).strip(), False  # closed, no need to constrain further
+
+        # If there's a start but no end, check for unclosed start
+        last_start_idx = text.rfind(start_delim)
+        last_end_idx = text.rfind(end_delim)
+        
+        # If the start delimiter appears after the last end delimiter, it's an open block
+        if last_start_idx > last_end_idx:
+            # Return the content after the last start delimiter, even if the end delimiter is missing
+            return text[last_start_idx + len(start_delim):].strip(), True
+
+        return "", False  # no open block => no constraint needed
+    
+    
+    def _update_valid_state(self, partial_output: str, idx: int, r: ParseResult):
         """
         This a simple heuristic to cut off the generated output at the end of the function. 
         TODO: Put this under a flag to enable/disable this heuristic.
@@ -242,13 +305,13 @@ class GrammarConstrainer:
         if idx < len(self.function_ends):
             if r.function_end: # If the function end is not None, then the last valid state is the function end
                 if self.function_ends[idx] is None: self.function_ends[idx] = []
-                self.function_ends[idx].append(len(partial_code) - len(r.remainder))
+                self.function_ends[idx].append(len(partial_output) - len(r.remainder))
 
         if idx < len(self.last_valid_state):
             for accept_seq in r.accept_sequences:
                 # 'EOF' is special terminal since $END does not work with python
                 if accept_seq[0] == '$END' or accept_seq[0] == 'EOF':
-                    self.last_valid_state[idx] = len(partial_code) - len(r.remainder)
+                    self.last_valid_state[idx] = len(partial_output) - len(r.remainder)
 
     @staticmethod
     def _bytes_to_string(byte_sequence: bytes) -> tuple[str, bytes]:
