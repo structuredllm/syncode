@@ -11,14 +11,14 @@ requirements = [
     "regex==2023.8.8",
     "torch",
     "tqdm",
-    "transformers==4.44.0",
+    "transformers==4.51.0",
     "datasets",
     "jsonschema"
 ]
 
 setuptools.setup(
     name="syncode",
-    version="0.4.10",
+    version="0.4.11",
     author="Shubham Ugare",
     author_email="shubhamugare@gmail.com",
     description="This package provides the tool for grammar augmented LLM generation.",

@@ -72,7 +72,10 @@ class JSONEval:
         else:
             problem["prompt"][0]['content'] = f"{problem['prompt'][0]['content']}\nOnly output JSON.\nJSON:\n"
 
-        prompt = syncode.model.tokenizer.apply_chat_template(problem["prompt"], tokenize = False)
+        if syncode.model.tokenizer.chat_template is not None:
+            prompt = syncode.model.tokenizer.apply_chat_template(problem["prompt"], tokenize = False)
+        else:
+            prompt = problem["prompt"][0]['content']
 
         batch_completions = syncode.model.generate_grammar_constrained_completion(prompt, num_samples_per_task)
         for completion_id, completion in enumerate(batch_completions):
