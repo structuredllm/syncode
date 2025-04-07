@@ -12,21 +12,32 @@ HF_ACCESS_TOKEN = os.environ['HF_ACCESS_TOKEN'] if 'HF_ACCESS_TOKEN' in os.envir
 
 
 def load_model(model_name, device, quantize, device_map = None):
+        torch_dtype = torch.bfloat16 if quantize else "auto"
+        device_map = device_map if device_map is not None else "auto"
+
+        attn_implementation = None
+        if "gemma-3" in model_name:
+            # This is due to the gemma-3 issue with SDPA implementation
+            # https://github.com/google-deepmind/gemma/issues/169
+            attn_implementation = "eager"
+            logging.info("Using slower \"eager\" attention implementation for gemma-3 due to issue with SDPA implementation")
+
         if model_name == 'test':
             model = AutoModelForCausalLM.from_pretrained('bigcode/tiny_starcoder_py').to(device)
         elif model_name == 'test-instruct':
             model = AutoModelForCausalLM.from_pretrained("rahuldshetty/tiny-starcoder-instruct")
         else:
             if device_map is not None:
-                if (quantize):
-                    model = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype=torch.bfloat16, cache_dir=HF_CACHE, token=HF_ACCESS_TOKEN, trust_remote_code=True, device_map = device_map).eval()
-                else:
-                    model = AutoModelForCausalLM.from_pretrained(model_name, cache_dir=HF_CACHE, token=HF_ACCESS_TOKEN, trust_remote_code=True, device_map = device_map).eval()
-            else:
-                if (quantize):
-                    model = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype=torch.bfloat16, cache_dir=HF_CACHE, token=HF_ACCESS_TOKEN, trust_remote_code=True).eval().to(device)
-                else:
-                    model = AutoModelForCausalLM.from_pretrained(model_name, cache_dir=HF_CACHE, token=HF_ACCESS_TOKEN, trust_remote_code=True).eval().to(device)
+                logging.info(f"Loading model {model_name} with device:{device}, device_map:{device_map}, torch_dtype:{torch_dtype}")
+                model = AutoModelForCausalLM.from_pretrained(
+                    model_name, 
+                    torch_dtype=torch_dtype, 
+                    cache_dir=HF_CACHE, 
+                    token=HF_ACCESS_TOKEN, 
+                    trust_remote_code=True, 
+                    device_map = device_map,
+                    attn_implementation=attn_implementation
+                    ).eval()
         return model
 
 def load_tokenizer(model_name):
@@ -35,7 +46,12 @@ def load_tokenizer(model_name):
         elif model_name == 'test-instruct':
             tokenizer = AutoTokenizer.from_pretrained("rahuldshetty/tiny-starcoder-instruct")
         else:
-            tokenizer = AutoTokenizer.from_pretrained(model_name, cache_dir=HF_CACHE, token=HF_ACCESS_TOKEN, trust_remote_code=True)
+            tokenizer = AutoTokenizer.from_pretrained(
+                model_name, 
+                cache_dir=HF_CACHE, 
+                token=HF_ACCESS_TOKEN, 
+                trust_remote_code=True
+                )
         return tokenizer
 
 def get_output_path(model_name, grammar, dataset, num_samples, mode):

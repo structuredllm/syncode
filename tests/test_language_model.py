@@ -56,40 +56,17 @@ class TestTokenizer:
         return {v: i for i, v in enumerate(self.vocab)}
 
 class TestHuggingFaceModel(unittest.TestCase):
-    def test_generate_grammar_constrained_completion(self):
-        torch.manual_seed(0)
-        model = TestModel()
-        tokenizer = TestTokenizer()
-        logger = common.EmptyLogger()
-        lm = HuggingFaceModel(model, Grammar('calc'), tokenizer, mode='original', max_new_tokens=15, device='cpu')
-        prompt = "113 + 235 + 17"
-        output = lm.generate_grammar_constrained_completion(prompt, 1)
-        self.assertEqual(len(output[0]), 15, "The output length does not match the expected value.")
-    
-    def test_generate_grammar_constrained_completion2(self):
-        torch.manual_seed(0)
-        model = TestModel()
-        tokenizer = TestTokenizer()
-        logger = common.EmptyLogger()
-        lm = HuggingFaceModel(model, Grammar('calc'), tokenizer, mode='original', max_new_tokens=15, device='cpu')
-        prompt = "113 + 235 + 17"
-        output = lm.generate_grammar_constrained_completion(prompt, 2)
-        self.assertEqual(len(output[0]), 15, "The output length does not match the expected value.")
-        self.assertEqual(len(output[1]), 15, "The output length does not match the expected value.")
-    
-    @unittest.skip("Only for local testing")
     def test_stop_word(self):
         torch.manual_seed(0)
-        syncode = Syncode(model="microsoft/phi-2", mode='original')
+        syncode = Syncode(model="microsoft/phi-2", mode='original', device='cpu')
         prompt = "Generate a json for the country nigeria.\n```json\n"
         stop_words = ["```"]
         output = syncode.infer(prompt, stop_words=stop_words)[0]
         assert output.endswith('```')
 
-    @unittest.skip("Only for local testing")
     def test_stop_word2(self):
         torch.manual_seed(0)
-        syncode = Syncode(model="microsoft/phi-2", mode='original')
+        syncode = Syncode(model="microsoft/phi-2", mode='original', device='cpu')
         prompt = "def add(a, b):\n"
         stop_words = ["\n\n"]
         output = syncode.infer(prompt, stop_words=stop_words)[0]

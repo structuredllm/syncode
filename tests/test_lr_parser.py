@@ -10,8 +10,8 @@ class ParserTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # Common setup that runs once before all tests
-        cls.tiny_grammar = Grammar('syncode/parsers/grammars/tiny_grammar.lark')
-        cls.calc_grammar = Grammar('syncode/parsers/grammars/calc_grammar.lark')
+        cls.tiny_grammar = Grammar('tiny')
+        cls.calc_grammar = Grammar('calc')
         cls.python_grammar = Grammar('python')
 
     def test_tiny(self):

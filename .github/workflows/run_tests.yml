@@ -27,7 +27,7 @@ jobs:
       uses: actions/cache@v3
       with:
           path: /home/runner/work/syncode/syncode/cache/mask_stores/
-          key: files-${{ hashFiles('syncode/parsers/grammars/python_grammar.lark', 'syncode/dfa_mask_store.py') }}
+          key: files-${{ hashFiles('syncode/parsers/grammars/python.lark', 'syncode/dfa_mask_store.py') }}
     - name: Run Tests
       run: |
           python3 -m unittest tests.test_misc
