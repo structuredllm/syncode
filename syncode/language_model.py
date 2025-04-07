@@ -179,9 +179,7 @@ class HuggingFaceModel:
         inputs = self.tokenizer(
             input_batch, 
             return_tensors="pt",
-            pad_to_multiple_of=8,
             ).to(self.model.device)
-
         return inputs
 
     @torch.inference_mode()
