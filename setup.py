@@ -8,7 +8,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 requirements = [
     "fire",
     "interegular",
-    "regex==2023.8.8",
+    "regex==2024.11.6",
     "torch",
     "tqdm",
     "transformers==4.51.0",
