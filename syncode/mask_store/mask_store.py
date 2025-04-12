@@ -269,10 +269,10 @@ class MaskStore:
         if (self._fsms.initial(fsm_state.terminal) == fsm_state or self._fsms.is_final(fsm_state)) and self._ignore_whitespace:
             if isinstance(remainder, bytes):
                 # For bytes, use lstrip() to remove all leading whitespace
-                remainder = remainder.lstrip()
+                remainder = remainder.lstrip(b' ')
             elif isinstance(remainder, str):
                 # For strings, use lstrip() to remove all leading whitespace
-                remainder = remainder.lstrip()
+                remainder = remainder.lstrip(' ')
         return remainder
 
     def _lookup_next_tokens_for_fsm_state(self, fsm_state: JointFSMState, next_terminal) -> torch.Tensor:
