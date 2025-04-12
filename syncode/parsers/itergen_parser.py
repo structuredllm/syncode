@@ -102,7 +102,9 @@ class SymbolPosMap:
 
             # We don't add the last lexer token as it may change in the future
             # Essntially, we don't want IterGen to stop immediatelly after generating terminal which may extend in the future
-            start_idx -= 1
+            if start_idx > 0:
+                start_idx -= 1
+                
             end_idx = len(lexer_tokens)-1
 
             for idx in range(start_idx, end_idx):
