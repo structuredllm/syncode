@@ -111,7 +111,8 @@ class HuggingFaceModel:
             stop_criteria = []
 
         # Generate completions
-        if self.opp and (gen_mode == GenerationMode.SAMPLE or gen_mode == GenerationMode.GREEDY_SEARCH) and batch_size == 1: # Use our own implementation for greedy search and sampling
+        if self.opp and (gen_mode == GenerationMode.SAMPLE or gen_mode == GenerationMode.GREEDY_SEARCH) and batch_size == 1: 
+            # Use our own implementation for greedy search and sampling
             generated_ids = self._generate(
                 inputs, 
                 gen_config, 
@@ -238,6 +239,11 @@ class HuggingFaceModel:
             # Copy is needed to avoid keeping a hanging ref to outputs.logits which may be very large for first iteration
             # (the clone itself is always small)
             next_token_scores = outputs.logits[:, -1, :].to(copy=True, dtype=torch.float32, device=token_ids.device)
+
+            if len(next_token_scores.shape) == 3:
+                # FIXME: This is a strange behaviour for some models like Phi-4
+                # We expect next_token_scores to be of shape (batch_size, vocab_size)
+                next_token_scores = next_token_scores[:, -1, :]
 
             if grammar_decoder is not None:
                 next_token = self._get_next_token(gen_mode, token_ids, logits_processor, next_token_scores)
