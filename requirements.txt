@@ -4,6 +4,6 @@ interegular
 regex==2024.11.6
 torch
 tqdm
-transformers==4.51.0; python_version < "3.13"
+transformers==4.51.3; python_version < "3.13"
 datasets
 jsonschema
