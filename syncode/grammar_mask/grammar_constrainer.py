@@ -206,6 +206,9 @@ class GrammarConstrainer:
             self._update_valid_state(partial_code, idx, res)
         except Exception as e:
             if self.dev_mode == True and accepted_generation:
+                logger.info("-"*50)
+                logger.info(f"Parsing failed!\nPartial code: {partial_output}\nParsed lexical tokens: {self.inc_parser.parsed_lexer_tokens}")
+                logger.info("-"*50)
                 raise e
             elif self.parse_failed == False and accepted_generation:
                 self.parse_failed = True
