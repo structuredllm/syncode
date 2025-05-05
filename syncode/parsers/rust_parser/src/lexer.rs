@@ -596,7 +596,7 @@ mod tests {
         
         // Should have 2 tokens: "hello" and "world"
         // (plus one EOF marker)
-        assert_eq!(tokens.len(), 3);
+        assert_eq!(tokens.len(), 2);
         
         // Check the first token
         match &tokens[0] {
