@@ -232,7 +232,7 @@ class IGParser(IncrementalParser):
         # Store parsed tokens, parser state, terminal sets, indent levels, dedent queue, and symbol pos map
         self.cur_pos_to_parser_state[key] = (
             copy.deepcopy(self.parsed_lexer_tokens), 
-            parser_state, 
+            parser_state.copy(),
             cur_ac_terminals, 
             next_ac_terminals, 
             indent_levels, 
@@ -338,12 +338,12 @@ class IGParser(IncrementalParser):
         Now handles updating the symbol position map during parsing.
         """
         # Get lexer tokens and initialize state
-        interactive = self.interactive
         lexer_tokens, lexing_incomplete = self._lex_code(partial_code)
-        self.next_ac_terminals = self._accepts(interactive)
+        self.next_ac_terminals = self._accepts(self.interactive)
 
         # Restore the previous state of the parser
         self._restore_recent_parser_state(lexer_tokens, symbol_pos_map=symbol_pos_map)
+        interactive = self.interactive
 
         # Update symbol position map for terminals if provided
         if symbol_pos_map is not None:
