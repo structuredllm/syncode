@@ -22,7 +22,7 @@ def create_parser(
         cache_filename = parser_cache_dir + f'{grammar}_{parser}_{grammar.hash()}_parser.pkl'
         os.makedirs(os.path.dirname(parser_cache_dir), exist_ok=True)
 
-        if grammar.name == 'python':
+        if grammar.name == 'python' and not use_symbol_pos_map:
             indenter = PythonIndenter()
 
         base_parser = create_base_parser(grammar, parser, indenter, cache_filename)
