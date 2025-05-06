@@ -35,12 +35,12 @@ class PythonIncrementalParser(IncrementalParser):
         return tab_len
 
     def get_acceptable_next_terminals(self, partial_code) -> ParseResult:
-        # Stores the sequence of tokens that the parser has seen in the order  
-        interactive = self.interactive
         lexer_tokens, lexing_incomplete = self._lex_code(partial_code)
+        self.next_ac_terminals = self._accepts(self.interactive)
 
         # Restore the previous state of the parser
         self._restore_recent_parser_state(lexer_tokens)
+        interactive = self.interactive
         
         next_ac_indents = None
 

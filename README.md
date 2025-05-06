@@ -69,7 +69,7 @@ SynCode depends on HuggingFace [transformers](https://github.com/huggingface/tra
 
 | SynCode version | Required transformers version | Python version |
 | -------------- | ----------------------------- | -------------- |
-| `v0.4.13` (latest) | `v4.51.0`                    | 3.6 - 3.12     |
+| `v0.4.14` (latest) | `v4.51.3`                    | 3.6 - 3.12     |
 
 **Note:** Python 3.13 is not currently supported due to dependency constraints.
 

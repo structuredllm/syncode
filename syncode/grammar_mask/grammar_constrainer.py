@@ -120,11 +120,11 @@ class GrammarConstrainer:
         self._set_start_from(input_ids)
 
         input_ids = torch.cat((input_ids, next_token.unsqueeze(0)), dim=-1)
-        partial_code, remainder_bytes = self._get_partial_codes(input_ids)[0]
+        partial_output, remainder_bytes = self._get_partial_outputs(input_ids)[0]
 
-        res, skip = self._parse_partial_code(
+        res, skip = self._parse_partial_output(
             idx=0, 
-            partial_code=partial_code, 
+            partial_output=partial_output, 
             remainder_bytes=remainder_bytes, 
             accepted_generation=False
             )
@@ -142,7 +142,7 @@ class GrammarConstrainer:
         is_valid = self.dfa_mask_store.is_valid_prefix(res)
 
         if is_valid:
-            self._update_valid_state(partial_code, 0, res)
+            self._update_valid_state(partial_output, 0, res)
 
         return is_valid
 
@@ -163,11 +163,11 @@ class GrammarConstrainer:
             torch.FloatTensor: The masked scores.
         """
         self._set_start_from(input_ids) # start_from is used for choosing where the parsing should start
-        partial_codes = self._get_partial_codes(input_ids)
+        partial_outputs = self._get_partial_outputs(input_ids)
 
-        for idx, (partial_code, remainder_bytes) in enumerate(partial_codes):
+        for idx, (partial_output, remainder_bytes) in enumerate(partial_outputs):
             # 1. Parsing
-            res, skip = self._parse_partial_code(idx, partial_code, remainder_bytes, accepted_generation=True)
+            res, skip = self._parse_partial_output(idx, partial_output, remainder_bytes, accepted_generation=True)
             if skip: continue
 
             # 2. Computing the accept mask
@@ -187,7 +187,13 @@ class GrammarConstrainer:
 
         return scores
 
-    def _parse_partial_code(self, idx: int, partial_code: str, remainder_bytes: bytes, accepted_generation=True) -> tuple[ParseResult, bool]:
+    def _parse_partial_output(
+            self, 
+            idx: int, 
+            partial_output: str, 
+            remainder_bytes: bytes, 
+            accepted_generation=True
+            ) -> tuple[ParseResult, bool]:
         """
         Parse the partial code and return the result.
         """
@@ -195,7 +201,7 @@ class GrammarConstrainer:
         res = None
         
         try: 
-            res = self.inc_parser.get_acceptable_next_terminals(partial_code)
+            res = self.inc_parser.get_acceptable_next_terminals(partial_output)
 
             if len(remainder_bytes) > 0:
                 res.remainder_state = RemainderState.INCOMPLETE
@@ -203,7 +209,7 @@ class GrammarConstrainer:
             else:
                 res.remainder = res.remainder.encode('utf-8')
 
-            self._update_valid_state(partial_code, idx, res)
+            self._update_valid_state(partial_output, idx, res)
         except Exception as e:
             if self.dev_mode == True and accepted_generation:
                 logger.info("-"*50)
@@ -213,31 +219,31 @@ class GrammarConstrainer:
             elif self.parse_failed == False and accepted_generation:
                 self.parse_failed = True
                 logger.info("-"*50)
-                logger.info(f"Parsing failed! Falling back to unconstrained decoding.\nException: {e}\nPartial code: {partial_code}\nParsed lexical tokens: {self.inc_parser.parsed_lexer_tokens}")
+                logger.info(f"Parsing failed! Falling back to unconstrained decoding.\nException: {e}\nPartial code: {partial_output}\nParsed lexical tokens: {self.inc_parser.parsed_lexer_tokens}")
                 logger.info("-"*50)
             skip = True
         return res, skip
 
-    def _get_partial_codes(self, input_ids: torch.LongTensor) -> list[(str, bytes)]:
+    def _get_partial_outputs(self, input_ids: torch.LongTensor) -> list[(str, bytes)]:
         """
         Get the partial codes for the input_ids and return the remainder bytes if the partial code is not a valid UTF-8 string.
         """     
         output = []
         for idx in range(len(input_ids)):
             if self.parse_output_only:
-                partial_code, remainder_bytes = self._bytes_to_string(
+                partial_output, remainder_bytes = self._bytes_to_string(
                     self.byte_tokenizer.decode(
                         input_ids[idx, self.start_from:].tolist(), skip_special_tokens=True)
                     )
             else:
-                partial_code, remainder_bytes = self._bytes_to_string(
+                partial_output, remainder_bytes = self._bytes_to_string(
                     self.byte_tokenizer.decode(
                         input_ids[idx].tolist(), skip_special_tokens=True)
                     )
-            output.append((partial_code, remainder_bytes))
+            output.append((partial_output, remainder_bytes))
         return output
 
-    def _update_valid_state(self, partial_code: str, idx: int, r: ParseResult):
+    def _update_valid_state(self, partial_output: str, idx: int, r: ParseResult):
         """
         This a simple heuristic to cut off the generated output at the end of the function. 
         TODO: Put this under a flag to enable/disable this heuristic.
@@ -245,13 +251,13 @@ class GrammarConstrainer:
         if idx < len(self.function_ends):
             if r.function_end: # If the function end is not None, then the last valid state is the function end
                 if self.function_ends[idx] is None: self.function_ends[idx] = []
-                self.function_ends[idx].append(len(partial_code) - len(r.remainder))
+                self.function_ends[idx].append(len(partial_output) - len(r.remainder))
 
         if idx < len(self.last_valid_state):
             for accept_seq in r.accept_sequences:
                 # 'EOF' is special terminal since $END does not work with python
                 if accept_seq[0] == '$END' or accept_seq[0] == 'EOF':
-                    self.last_valid_state[idx] = len(partial_code) - len(r.remainder)
+                    self.last_valid_state[idx] = len(partial_output) - len(r.remainder)
 
     @staticmethod
     def _bytes_to_string(byte_sequence: bytes) -> tuple[str, bytes]:
