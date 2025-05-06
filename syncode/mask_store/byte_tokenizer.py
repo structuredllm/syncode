@@ -188,11 +188,12 @@ class ByteTokenizer:
         # Cache special token IDs as a set for faster lookups
         self.special_token_ids = set(getattr(tokenizer, "all_special_ids", []))
 
+        # NOTE: This seems to be problematic in some cases where regular tokens like "\t" are treated as special tokens
         # Added tokens are typically special tokens
         # if added_tokens_decoder is not None self.tokenizer.added_tokens_decoder.keys()
         # to special_token_ids
-        if hasattr(tokenizer, "added_tokens_decoder"):
-            self.special_token_ids.update(tokenizer.added_tokens_decoder.keys())
+        # if hasattr(tokenizer, "added_tokens_decoder"):
+        #     self.special_token_ids.update(tokenizer.added_tokens_decoder.keys())
 
 
     @classmethod
