@@ -59,20 +59,6 @@ pub enum LexerError {
     RegexError(String),
 }
 
-/// Result enum to represent either a token or an error that resulted from the
-/// input (e.g. no lexical token was found).
-// #[derive(Debug, Clone)]
-// pub enum LexResult {
-//     Token(Token), // Some lexical token of the grammar.
-//     Error(Token),
-// Eof {
-//     // End-of-file.
-//     pos: usize,
-//     line: usize,
-//     column: usize,
-// },
-// }
-
 /// Wrap
 pub struct Scanner {
     // The DFA for matching patterns
@@ -326,17 +312,7 @@ impl Lexer {
             }
         };
 
-        // Use a loop instead of recursion to handle ignored tokens
         loop {
-            // Check if we're at the end of the text
-            // if pos >= text.len() {
-            //     return Ok(LexResult::Eof {
-            //         pos: text.len(),
-            //         line,
-            //         column,
-            //     });
-            // }
-
             // Try to match next token
             if let Some((value, type_name)) = scanner.match_token(text, pos) {
                 // Note: type_name is now &str, not String, so we don't use & prefix
