@@ -8,8 +8,8 @@ use std::fmt;
 /// Token struct to represent lexer tokens.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Token {
-    pub value: String,      // The content of the token.
-    pub type_name: String,  // The type of the token in the grammar, "" if unlexable.
+    pub value: String,     // The content of the token.
+    pub type_name: String, // The type of the token in the grammar, "" if unlexable.
     pub start_pos: usize,
     pub end_pos: usize,
     pub line: usize,
@@ -370,16 +370,19 @@ impl Lexer {
                     (line, column + value.chars().count())
                 };
 
-                return Ok((Token {
-                    value: value.to_string(),         // Convert &str to String
-                    type_name: type_name.to_string(), // Convert &str to String
-                    start_pos,
-                    end_pos,
-                    line: start_line,
-                    column: start_column,
-                    end_line,
-                    end_column,
-                }, false));
+                return Ok((
+                    Token {
+                        value: value.to_string(),         // Convert &str to String
+                        type_name: type_name.to_string(), // Convert &str to String
+                        start_pos,
+                        end_pos,
+                        line: start_line,
+                        column: start_column,
+                        end_line,
+                        end_column,
+                    },
+                    false,
+                ));
             } else {
                 // No match found. Suppose that everything left is the
                 // remainder, which requires us to assume that the string does
@@ -388,17 +391,20 @@ impl Lexer {
                 // the middle of a sequence of otherwise lexable forms (e.g. `1
                 // + 0x + 3` in Python). If SynCode is doing its job correctly,
                 // such a string should never be generated.
-                return Ok((Token {
-                    type_name: "".to_string(),
-                    value: text[pos..].to_string(),
-                    start_pos: pos,
-                    end_pos: text.len(),
-                    line,
-                    column,
-                    // TODO: How to compute these values?
-                    end_line: usize::MAX,
-                    end_column: usize::MAX,
-                }, true));
+                return Ok((
+                    Token {
+                        type_name: "".to_string(),
+                        value: text[pos..].to_string(),
+                        start_pos: pos,
+                        end_pos: text.len(),
+                        line,
+                        column,
+                        // TODO: How to compute these values?
+                        end_line: usize::MAX,
+                        end_column: usize::MAX,
+                    },
+                    true,
+                ));
             }
         }
     }
@@ -433,36 +439,36 @@ impl Lexer {
             let (new_token, is_remainder) = self.next_token(text, pos, line, column)?;
 
             if is_remainder {
-		// We should quit early, because we've seen all there is to see.
-		let elapsed = start_time.elapsed();
-		eprintln!(
-		    "Rust lexing completed in {:?} - produced {} tokens",
-		    elapsed,
-		    tokens.len()
-		);
+                // We should quit early, because we've seen all there is to see.
+                let elapsed = start_time.elapsed();
+                eprintln!(
+                    "Rust lexing completed in {:?} - produced {} tokens",
+                    elapsed,
+                    tokens.len()
+                );
                 return Ok((tokens, new_token));
             }
 
-	    // Otherwise, continue counting forward to get new tokens.
-	    pos = new_token.end_pos;
+            // Otherwise, continue counting forward to get new tokens.
+            pos = new_token.end_pos;
             line = new_token.end_line;
             column = new_token.end_column;
 
-	    tokens.push(new_token.clone());
+            tokens.push(new_token.clone());
 
-	    // The remainder will be the last token we've seen, unless
+            // The remainder will be the last token we've seen, unless
             // the last thing we see is unlexable.
             remainder = new_token;
 
-	    if pos >= text.len() {
-		let elapsed = start_time.elapsed();
-		eprintln!(
-		    "Rust lexing completed in {:?} - produced {} tokens",
-		    elapsed,
-		    tokens.len()
-		);
-		return Ok((tokens, remainder))
-	    }
+            if pos >= text.len() {
+                let elapsed = start_time.elapsed();
+                eprintln!(
+                    "Rust lexing completed in {:?} - produced {} tokens",
+                    elapsed,
+                    tokens.len()
+                );
+                return Ok((tokens, remainder));
+            }
         }
     }
 }
@@ -833,7 +839,7 @@ mod tests {
             }
         );
 
-	assert_eq!(
+        assert_eq!(
             tokens[1],
             Token {
                 value: "ret".to_string(),
@@ -847,7 +853,7 @@ mod tests {
             }
         );
 
-	assert_eq!(tokens[1], remainder);
+        assert_eq!(tokens[1], remainder);
     }
 
     #[test]
