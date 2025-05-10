@@ -59,7 +59,7 @@ pub enum LexerError {
     RegexError(String),
 }
 
-/// Wrap
+/// Hold DFAs for the terminals in the grammar.
 pub struct Scanner {
     // The DFA for matching patterns
     dfa: dense::DFA<Vec<u32>>,
