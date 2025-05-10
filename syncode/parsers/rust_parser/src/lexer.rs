@@ -309,7 +309,7 @@ impl Lexer {
 
     /// Get the next token from text, updating pos, line, and column to the end
     /// (?) of the new token.
-    pub fn next_token(
+    fn next_token(
         &self,
         text: &str,
         mut pos: usize,
