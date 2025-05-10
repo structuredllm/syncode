@@ -24,14 +24,14 @@ impl fmt::Display for Token {
     }
 }
 
-// Pattern types to match Lark's patterns
+/// Pattern types to match Lark's patterns.
 #[derive(Clone, Debug)]
 pub enum Pattern {
     Str(String),
     Regex(String, HashSet<String>), // regex pattern and flags
 }
 
-// Terminal definition matching Lark's TerminalDef
+/// Terminal definition matching Lark's TerminalDef.
 #[derive(Clone, Debug)]
 pub struct TerminalDef {
     pub name: String,
