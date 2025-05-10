@@ -5,7 +5,7 @@ mod python_bindings;
 mod util;
 
 use pyo3::prelude::*;
-use python_bindings::{RustLexer, PyLexerToken, RustParser};
+use python_bindings::{PyLexerToken, RustLexer, RustParser};
 
 /// A Python module implemented in Rust.
 #[pymodule]
