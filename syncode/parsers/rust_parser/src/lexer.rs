@@ -568,8 +568,8 @@ mod tests {
         assert_eq!(tokens.0[1].value, "world");
         assert_eq!(tokens.0[1].type_name, "WORD");
 
-	// The remainder should be the last token in the input.
-	assert_eq!(tokens.0[1], tokens.1);
+        // The remainder should be the last token in the input.
+        assert_eq!(tokens.0[1], tokens.1);
     }
 
     #[test]
@@ -822,8 +822,8 @@ mod tests {
                 priority: 2,
             },
             TerminalDef {
-                name: "RETURN".to_string(),
-                pattern: Pattern::Regex("return".to_string(), HashSet::new()),
+                name: "DEC_NUMBER".to_string(),
+                pattern: Pattern::Regex("\\d+".to_string(), HashSet::new()),
                 priority: 2,
             },
             TerminalDef {
@@ -839,11 +839,40 @@ mod tests {
         lexer.initialize(terminals, ignore_types).unwrap();
 
         let text = "123 ret";
-        let tokens = lexer.lex_text(text).unwrap();
+        let (tokens, remainder) = lexer.lex_text(text).unwrap();
 
         // We expect:
         // tokens: [123, ret]
         // remainder: ret
+        assert_eq!(
+            tokens[0],
+            Token {
+                value: "123".to_string(),
+                type_name: "DEC_NUMBER".to_string(),
+                start_pos: 0,
+                end_pos: 3,
+                line: 1,
+                column: 1,
+                end_line: 1,
+                end_column: 4
+            }
+        );
+
+	assert_eq!(
+            tokens[1],
+            Token {
+                value: "ret".to_string(),
+                type_name: "WORD".to_string(),
+                start_pos: 4,
+                end_pos: 7,
+                line: 1,
+                column: 5,
+                end_line: 1,
+                end_column: 8
+            }
+        );
+
+	assert_eq!(tokens[1], remainder);
     }
 
     #[test]
@@ -858,7 +887,7 @@ mod tests {
             TerminalDef {
                 name: "HEX_NUMBER".to_string(),
                 pattern: Pattern::Regex(
-                    r"0x[\da-f]*".to_string(),
+                    r"0x[\da-f]+".to_string(),
                     HashSet::from(["i".to_string()]),
                 ),
                 priority: 2,
@@ -876,11 +905,38 @@ mod tests {
         lexer.initialize(terminals, ignore_types).unwrap();
 
         let text = "return 0x";
-        let tokens = lexer.lex_text(text).unwrap();
+        let (tokens, remainder) = lexer.lex_text(text).unwrap();
 
         // We expect:
         // tokens: [return]
         // remainder: 0x
+        assert_eq!(
+            tokens[0],
+            Token {
+                value: "return".to_string(),
+                type_name: "WORD".to_string(),
+                start_pos: 0,
+                end_pos: 6,
+                line: 1,
+                column: 1,
+                end_line: 1,
+                end_column: 7
+            }
+        );
+
+        assert_eq!(
+            remainder,
+            Token {
+                value: "0x".to_string(),
+                type_name: "".to_string(),
+                start_pos: 7,
+                end_pos: 9,
+                line: 1,
+                column: 8,
+                end_line: usize::MAX,
+                end_column: usize::MAX
+            }
+        );
     }
 
     #[test]
@@ -935,7 +991,7 @@ mod tests {
         assert_eq!(tokens.0[4].line, 3);
         assert_eq!(tokens.0[4].value, "third");
 
-	// The remainder should be the last token seen.
-	assert_eq!(tokens.1, tokens.0[4]);
+        // The remainder should be the last token seen.
+        assert_eq!(tokens.1, tokens.0[4]);
     }
 }
