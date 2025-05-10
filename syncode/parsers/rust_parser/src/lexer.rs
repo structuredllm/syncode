@@ -39,7 +39,6 @@ pub struct TerminalDef {
     pub priority: i32,
 }
 
-// Error types
 /// A type to describe errors with the lexer object itself (e.g. invalid
 /// initialization).
 #[derive(Debug, Clone)]
