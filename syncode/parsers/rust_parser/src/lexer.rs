@@ -1,45 +1,21 @@
 // src/lexer.rs
 use regex::Regex;
 use regex_automata::dfa::{Automaton, StartKind, dense};
-use regex_automata::{Anchored, Input, util::start};
+use regex_automata::{Anchored, util::start};
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 
-// Token struct to represent lexer tokens
-#[derive(Clone, Debug)]
+/// Token struct to represent lexer tokens.
+#[derive(Clone, Debug, PartialEq)]
 pub struct Token {
-    pub value: String,
-    pub type_name: String,
+    pub value: String,      // The content of the token.
+    pub type_name: String,  // The type of the token in the grammar, "" if unlexable.
     pub start_pos: usize,
     pub end_pos: usize,
     pub line: usize,
     pub column: usize,
     pub end_line: usize,
     pub end_column: usize,
-}
-
-impl Token {
-    pub fn new(
-        value: String,
-        type_name: String,
-        start_pos: usize,
-        line: usize,
-        column: usize,
-        end_line: usize,
-        end_column: usize,
-        end_pos: usize,
-    ) -> Self {
-        Token {
-            value,
-            type_name,
-            start_pos,
-            end_pos,
-            line,
-            column,
-            end_line,
-            end_column,
-        }
-    }
 }
 
 impl fmt::Display for Token {
@@ -63,67 +39,9 @@ pub struct TerminalDef {
     pub priority: i32,
 }
 
-// LineCounter to keep track of line and column numbers
-#[derive(Clone, Debug)]
-pub struct LineCounter {
-    pub char_pos: usize,
-    pub line: usize,
-    pub column: usize,
-    pub line_start_pos: usize,
-    pub newline_char: String,
-}
-
-impl LineCounter {
-    pub fn new(newline_char: &str) -> Self {
-        LineCounter {
-            char_pos: 0,
-            line: 1,
-            column: 1,
-            line_start_pos: 0,
-            newline_char: newline_char.to_string(),
-        }
-    }
-
-    pub fn feed(&mut self, text: &str, test_newline: bool) {
-        if test_newline {
-            // Fast newline counting
-            let bytes = text.as_bytes();
-            let newline_byte = self.newline_char.as_bytes()[0]; // Assuming single-byte newline
-
-            let mut newlines = 0;
-            let mut last_newline_pos = None;
-
-            for (i, &b) in bytes.iter().enumerate() {
-                if b == newline_byte {
-                    newlines += 1;
-                    last_newline_pos = Some(i);
-                }
-            }
-
-            if newlines > 0 {
-                self.line += newlines;
-                if let Some(pos) = last_newline_pos {
-                    self.line_start_pos = self.char_pos + pos + 1;
-                }
-            }
-        }
-
-        self.char_pos += text.len();
-        self.column = self.char_pos - self.line_start_pos + 1;
-    }
-}
-
-// LexerState to track current lexer state
-#[derive(Clone, Debug)]
-pub struct LexerState {
-    pub text: String,
-    pub start: usize,
-    pub end: usize,
-    pub line_ctr: LineCounter,
-    pub last_token: Option<Token>,
-}
-
 // Error types
+/// A type to describe errors with the lexer object itself (e.g. invalid
+/// initialization).
 #[derive(Debug, Clone)]
 pub enum LexerError {
     UnexpectedChar {
@@ -142,25 +60,21 @@ pub enum LexerError {
     RegexError(String),
 }
 
-// Result enum to represent either a token or an error
-#[derive(Debug, Clone)]
-pub enum LexResult {
-    Token(Token),
-    Error {
-        error_type: String,
-        pos: usize,
-        line: usize,
-        column: usize,
-        allowed: Option<Vec<String>>,
-        char: char,
-    },
-    Eof {
-        pos: usize,
-        line: usize,
-        column: usize,
-    },
-}
+/// Result enum to represent either a token or an error that resulted from the
+/// input (e.g. no lexical token was found).
+// #[derive(Debug, Clone)]
+// pub enum LexResult {
+//     Token(Token), // Some lexical token of the grammar.
+//     Error(Token),
+// Eof {
+//     // End-of-file.
+//     pos: usize,
+//     line: usize,
+//     column: usize,
+// },
+// }
 
+/// Wrap
 pub struct Scanner {
     // The DFA for matching patterns
     dfa: dense::DFA<Vec<u32>>,
@@ -280,9 +194,9 @@ impl Scanner {
         })
     }
 
-    // Updated match_token implementation
-
-    // Updated match_token that returns string slices
+    /// Match the next token in the input, beginning at position pos, and
+    /// return it along with the type of terminal that it is. Look for the
+    /// longest possible match.
     pub fn match_token<'a>(&self, text: &'a str, pos: usize) -> Option<(&'a str, &str)> {
         if pos >= text.len() {
             return None;
@@ -340,7 +254,7 @@ impl Scanner {
     }
 }
 
-// Main Lexer implementation
+/// Main Lexer struct.
 pub struct Lexer {
     scanner: Option<Scanner>,
     terminals: Vec<TerminalDef>,
@@ -393,14 +307,16 @@ impl Lexer {
         }
     }
 
+    /// Get the next token from text, updating pos, line, and column to the end
+    /// (?) of the new token.
     pub fn next_token(
         &self,
         text: &str,
         mut pos: usize,
         mut line: usize,
         mut column: usize,
-        last_token: Option<&Token>,
-    ) -> Result<LexResult, LexerError> {
+        //        last_token: Option<&Token>,
+    ) -> Result<(Token, bool), LexerError> {
         // Ensure scanner is initialized
         let scanner = match &self.scanner {
             Some(s) => s,
@@ -414,13 +330,13 @@ impl Lexer {
         // Use a loop instead of recursion to handle ignored tokens
         loop {
             // Check if we're at the end of the text
-            if pos >= text.len() {
-                return Ok(LexResult::Eof {
-                    pos: text.len(),
-                    line,
-                    column,
-                });
-            }
+            // if pos >= text.len() {
+            //     return Ok(LexResult::Eof {
+            //         pos: text.len(),
+            //         line,
+            //         column,
+            //     });
+            // }
 
             // Try to match next token
             if let Some((value, type_name)) = scanner.match_token(text, pos) {
@@ -479,7 +395,7 @@ impl Lexer {
                     (line, column + value.chars().count())
                 };
 
-                let token = Token {
+                return Ok((Token {
                     value: value.to_string(),         // Convert &str to String
                     type_name: type_name.to_string(), // Convert &str to String
                     start_pos,
@@ -488,31 +404,37 @@ impl Lexer {
                     column: start_column,
                     end_line,
                     end_column,
-                };
-
-                return Ok(LexResult::Token(token));
+                }, false));
             } else {
-                // No match found - unexpected character
-                let allowed_types: Vec<String> = scanner
-                    .allowed_types
-                    .difference(&self.ignore_types)
-                    .cloned()
-                    .collect();
-
-                return Ok(LexResult::Error {
-                    error_type: "unexpected-char".to_string(),
-                    char: text.chars().nth(pos).unwrap_or_default(),
-                    pos,
+                // No match found. Suppose that everything left is the
+                // remainder, which requires us to assume that the string does
+                // not diverge from the grammar at any previous
+                // point. Otherwise, you could end up with a broken token in
+                // the middle of a sequence of otherwise lexable forms (e.g. `1
+                // + 0x + 3` in Python). If SynCode is doing its job correctly,
+                // such a string should never be generated.
+                return Ok((Token {
+                    type_name: "".to_string(),
+                    value: text[pos..].to_string(),
+                    start_pos: pos,
+                    end_pos: text.len(),
                     line,
                     column,
-                    allowed: Some(allowed_types),
-                });
+                    // TODO: How to compute these values?
+                    end_line: usize::MAX,
+                    end_column: usize::MAX,
+                }, true));
             }
         }
     }
 
-    // Lex the entire text and return all tokens
-    pub fn lex_text(&self, text: &str) -> Result<Vec<LexResult>, LexerError> {
+    /// Lex the entire text and return all the tokens along with the remainder.
+    ///
+    /// The remainder (see sec. 4.2 of the paper) is either the last lexical
+    /// token, in the case where the entire input could be lexed, or the
+    /// unlexable suffix, in the case where the end of the input could not be
+    /// lexed.
+    pub fn lex_text(&self, text: &str) -> Result<(Vec<Token>, Token), LexerError> {
         if self.scanner.is_none() {
             return Err(LexerError::InitError(
                 "Scanner not initialized. Call initialize() first.".to_string(),
@@ -523,51 +445,50 @@ impl Lexer {
         let estimated_token_count = text.len() / 8;
         let mut tokens = Vec::with_capacity(estimated_token_count);
 
+        let mut remainder: Token;
+
         let mut pos = 0;
         let mut line = 1;
         let mut column = 1;
-        let mut last_token = None;
 
         // Start timing for performance measurement
         let start_time = std::time::Instant::now();
 
-        while pos < text.len() {
-            // Pass a reference to last_token if it exists
-            let last_token_ref = last_token.as_ref();
+        loop {
+            let (new_token, is_remainder) = self.next_token(text, pos, line, column)?;
 
-            match self.next_token(text, pos, line, column, last_token_ref)? {
-                LexResult::Token(token) => {
-                    // Update position for next token
-                    pos = token.end_pos;
-                    line = token.end_line;
-                    column = token.end_column;
-
-                    // Store token for next iteration - take ownership
-                    last_token = Some(token.clone());
-
-                    tokens.push(LexResult::Token(token));
-                }
-                error @ LexResult::Error { .. } => {
-                    // Return the error
-                    tokens.push(error);
-                    break;
-                }
-                eof @ LexResult::Eof { .. } => {
-                    // End of file reached
-                    tokens.push(eof);
-                    break;
-                }
+            if is_remainder {
+		// We should quit early, because we've seen all there is to see.
+		let elapsed = start_time.elapsed();
+		eprintln!(
+		    "Rust lexing completed in {:?} - produced {} tokens",
+		    elapsed,
+		    tokens.len()
+		);
+                return Ok((tokens, new_token));
             }
+
+	    // Otherwise, continue counting forward to get new tokens.
+	    pos = new_token.end_pos;
+            line = new_token.end_line;
+            column = new_token.end_column;
+
+	    tokens.push(new_token.clone());
+
+	    // The remainder will be the last token we've seen, unless
+            // the last thing we see is unlexable.
+            remainder = new_token;
+
+	    if pos >= text.len() {
+		let elapsed = start_time.elapsed();
+		eprintln!(
+		    "Rust lexing completed in {:?} - produced {} tokens",
+		    elapsed,
+		    tokens.len()
+		);
+		return Ok((tokens, remainder))
+	    }
         }
-
-        let elapsed = start_time.elapsed();
-        eprintln!(
-            "Rust lexing completed in {:?} - produced {} tokens",
-            elapsed,
-            tokens.len()
-        );
-
-        Ok(tokens)
     }
 }
 
@@ -577,21 +498,7 @@ mod tests {
     use std::collections::HashSet;
 
     #[test]
-    fn test_token_creation() {
-        let token = Token::new("hello".to_string(), "WORD".to_string(), 0, 1, 1, 1, 6, 5);
-
-        assert_eq!(token.value, "hello");
-        assert_eq!(token.type_name, "WORD");
-        assert_eq!(token.start_pos, 0);
-        assert_eq!(token.line, 1);
-        assert_eq!(token.column, 1);
-        assert_eq!(token.end_line, 1);
-        assert_eq!(token.end_column, 6);
-        assert_eq!(token.end_pos, 5);
-    }
-
-    #[test]
-    fn test_lexer_initialization() {
+    fn lexer_initialization() {
         let mut lexer = Lexer::new();
 
         // Create terminal definitions
@@ -623,7 +530,7 @@ mod tests {
     }
 
     #[test]
-    fn test_simple_lexing() {
+    fn simple_lexing() {
         let mut lexer = Lexer::new();
 
         // Create terminal definitions
@@ -653,77 +560,20 @@ mod tests {
 
         // Should have 2 tokens: "hello" and "world"
         // (plus one EOF marker)
-        assert_eq!(tokens.len(), 2);
+        assert_eq!(tokens.0.len(), 2);
 
-        // Check the first token
-        match &tokens[0] {
-            LexResult::Token(token) => {
-                assert_eq!(token.value, "hello");
-                assert_eq!(token.type_name, "WORD");
-            }
-            _ => panic!("Expected token, got something else"),
-        }
+        assert_eq!(tokens.0[0].value, "hello");
+        assert_eq!(tokens.0[0].type_name, "WORD");
 
-        // Check the second token
-        match &tokens[1] {
-            LexResult::Token(token) => {
-                assert_eq!(token.value, "world");
-                assert_eq!(token.type_name, "WORD");
-            }
-            _ => panic!("Expected token, got something else"),
-        }
+        assert_eq!(tokens.0[1].value, "world");
+        assert_eq!(tokens.0[1].type_name, "WORD");
 
-        // Check EOF
-        match &tokens[2] {
-            LexResult::Eof { .. } => {}
-            _ => panic!("Expected EOF, got something else"),
-        }
+	// The remainder should be the last token in the input.
+	assert_eq!(tokens.0[1], tokens.1);
     }
 
     #[test]
-    fn test_lexer_error_handling() {
-        let mut lexer = Lexer::new();
-
-        // Create terminal definitions
-        let word_pattern = Pattern::Regex("[a-zA-Z]+".to_string(), HashSet::new());
-
-        let terminal_defs = vec![TerminalDef {
-            name: "WORD".to_string(),
-            pattern: word_pattern,
-            priority: 1,
-        }];
-
-        let ignore_types = HashSet::new();
-
-        // Initialize the lexer
-        lexer.initialize(terminal_defs, ignore_types).unwrap();
-
-        // Try to lex text with an invalid character
-        let result = lexer.lex_text("abc123").unwrap();
-
-        // Should have token "abc" and then an error
-        assert_eq!(result.len(), 2);
-
-        match &result[0] {
-            LexResult::Token(token) => {
-                assert_eq!(token.value, "abc");
-            }
-            _ => panic!("Expected token, got something else"),
-        }
-
-        match &result[1] {
-            LexResult::Error {
-                error_type, pos, ..
-            } => {
-                assert_eq!(error_type, "unexpected-char");
-                assert_eq!(*pos, 3);
-            }
-            _ => panic!("Expected error, got something else"),
-        }
-    }
-
-    #[test]
-    fn test_complex_string_literals() {
+    fn complex_string_literals() {
         let mut lexer = Lexer::new();
 
         // Create pattern for simpler string literals without lookbehind
@@ -775,11 +625,9 @@ mod tests {
 
         // Extract token types
         let token_types: Vec<String> = tokens
+            .0
             .iter()
-            .filter_map(|t| match t {
-                LexResult::Token(token) => Some(token.type_name.clone()),
-                _ => None,
-            })
+            .map(|token| token.type_name.clone())
             .collect();
 
         // Expected: WORD, EQUALS, STRING, DOT
@@ -795,7 +643,7 @@ mod tests {
     }
 
     #[test]
-    fn test_numeric_literals() {
+    fn numeric_literals() {
         let mut lexer = Lexer::new();
 
         // Create patterns for different numeric literals
@@ -952,11 +800,9 @@ mod tests {
 
             // Check token types and values (excluding EOF)
             let token_info: Vec<(String, String)> = tokens
+                .0
                 .iter()
-                .filter_map(|t| match t {
-                    LexResult::Token(token) => Some((token.type_name.clone(), token.value.clone())),
-                    _ => None,
-                })
+                .map(|token| (token.type_name.clone(), token.value.clone()))
                 .collect();
 
             assert_eq!(token_info, expected_tokens, "Failed for text: {}", text);
@@ -964,71 +810,81 @@ mod tests {
     }
 
     #[test]
-    fn test_error_recovery() {
-        let mut lexer = Lexer::new();
-
-        // Define patterns but exclude some characters to force errors
-        let word_pattern = Pattern::Regex("[a-zA-Z_]\\w*".to_string(), HashSet::new());
-        let number_pattern = Pattern::Regex("\\d+".to_string(), HashSet::new());
-        let space_pattern = Pattern::Regex("\\s+".to_string(), HashSet::new());
-
-        // Note: We don't define patterns for special characters to test error handling
-
-        let terminal_defs = vec![
+    fn remainder_is_lexical_token() {
+        // Example from page 10 of the paper. In the case where the string
+        // could be lexed all the way to the end, the remainder is the last
+        // lexical terminal (because that could change its type with future
+        // additions).
+        let terminals = vec![
             TerminalDef {
                 name: "WORD".to_string(),
-                pattern: word_pattern,
+                pattern: Pattern::Regex("[a-zA-Z_]\\w*".to_string(), HashSet::new()),
                 priority: 2,
             },
             TerminalDef {
-                name: "NUMBER".to_string(),
-                pattern: number_pattern,
-                priority: 1,
+                name: "RETURN".to_string(),
+                pattern: Pattern::Regex("return".to_string(), HashSet::new()),
+                priority: 2,
             },
             TerminalDef {
                 name: "SPACE".to_string(),
-                pattern: space_pattern,
+                pattern: Pattern::Regex("\\s+".to_string(), HashSet::new()),
                 priority: 0,
             },
         ];
 
         let ignore_types = HashSet::from(["SPACE".to_string()]);
 
-        // Initialize the lexer
-        lexer.initialize(terminal_defs, ignore_types).unwrap();
+        let mut lexer = Lexer::new();
+        lexer.initialize(terminals, ignore_types).unwrap();
 
-        // Test text with characters that should cause errors
-        let text = "variable = 123; // comment";
-
+        let text = "123 ret";
         let tokens = lexer.lex_text(text).unwrap();
 
         // We expect:
-        // - "variable" as WORD
-        // - Error at '='
-        let first_token = &tokens[0];
-        let second_result = &tokens[1];
-
-        match first_token {
-            LexResult::Token(token) => {
-                assert_eq!(token.value, "variable");
-                assert_eq!(token.type_name, "WORD");
-            }
-            _ => panic!("Expected token, got something else"),
-        }
-
-        match second_result {
-            LexResult::Error {
-                error_type, pos, ..
-            } => {
-                assert_eq!(error_type, "unexpected-char");
-                assert_eq!(*pos, 9); // Position of '='
-            }
-            _ => panic!("Expected error, got something else"),
-        }
+        // tokens: [123, ret]
+        // remainder: ret
     }
 
     #[test]
-    fn test_multiline_tracking() {
+    fn remainder_is_not_lexical_token() {
+        // In the case where the string could not be lexed all the way to the end, the remainder is unlexed suffix.
+        let terminals = vec![
+            TerminalDef {
+                name: "WORD".to_string(),
+                pattern: Pattern::Regex("[a-zA-Z_]\\w*".to_string(), HashSet::new()),
+                priority: 2,
+            },
+            TerminalDef {
+                name: "HEX_NUMBER".to_string(),
+                pattern: Pattern::Regex(
+                    r"0x[\da-f]*".to_string(),
+                    HashSet::from(["i".to_string()]),
+                ),
+                priority: 2,
+            },
+            TerminalDef {
+                name: "SPACE".to_string(),
+                pattern: Pattern::Regex("\\s+".to_string(), HashSet::new()),
+                priority: 0,
+            },
+        ];
+
+        let ignore_types = HashSet::from(["SPACE".to_string()]);
+
+        let mut lexer = Lexer::new();
+        lexer.initialize(terminals, ignore_types).unwrap();
+
+        let text = "return 0x";
+        let tokens = lexer.lex_text(text).unwrap();
+
+        // We expect:
+        // tokens: [return]
+        // remainder: 0x
+    }
+
+    #[test]
+    fn multiline_tracking() {
         let mut lexer = Lexer::new();
 
         // Create pattern for newlines and other tokens
@@ -1064,28 +920,22 @@ mod tests {
 
         let tokens = lexer.lex_text(text).unwrap();
 
-        // Filter out just the tokens
-        let real_tokens: Vec<Token> = tokens
-            .iter()
-            .filter_map(|t| match t {
-                LexResult::Token(token) => Some(token.clone()),
-                _ => None,
-            })
-            .collect();
-
         // Check line numbers
-        assert_eq!(real_tokens.len(), 5); // 3 words + 2 newlines
+        assert_eq!(tokens.0.len(), 5); // 3 words + 2 newlines
 
         // First word should be on line 1
-        assert_eq!(real_tokens[0].line, 1);
-        assert_eq!(real_tokens[0].value, "first");
+        assert_eq!(tokens.0[0].line, 1);
+        assert_eq!(tokens.0[0].value, "first");
 
         // After first newline, we should be on line 2
-        assert_eq!(real_tokens[2].line, 2);
-        assert_eq!(real_tokens[2].value, "second");
+        assert_eq!(tokens.0[2].line, 2);
+        assert_eq!(tokens.0[2].value, "second");
 
         // After second newline, we should be on line 3
-        assert_eq!(real_tokens[4].line, 3);
-        assert_eq!(real_tokens[4].value, "third");
+        assert_eq!(tokens.0[4].line, 3);
+        assert_eq!(tokens.0[4].value, "third");
+
+	// The remainder should be the last token seen.
+	assert_eq!(tokens.1, tokens.0[4]);
     }
 }
