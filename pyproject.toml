@@ -24,7 +24,7 @@ dependencies = [
     "regex==2024.11.6",
     "torch",
     "tqdm",
-    "transformers==4.52.3",
+    "transformers==4.52.4",
     "datasets",
     "jsonschema",
 ]
