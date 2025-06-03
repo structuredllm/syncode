@@ -51,6 +51,7 @@ class Syncode:
         seed: Optional[int] = None,
         opp: bool = True,
         device_map: Optional[str] = None,
+        indent: bool = False,
         **kwargs
     ):  
         # Check inputs
@@ -102,6 +103,7 @@ class Syncode:
                 dev_mode=dev_mode,
                 parser=parser,
                 mode=mode,
+                indent=indent
             )
 
         # Set default max new tokens if not provided

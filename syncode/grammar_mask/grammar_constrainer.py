@@ -1,6 +1,5 @@
 import torch
-import syncode.common as common
-from transformers import LogitsProcessor, PreTrainedTokenizer
+from transformers import PreTrainedTokenizer
 from syncode.mask_store.byte_tokenizer import ByteTokenizer
 from syncode.parse_result import AcceptSequence, RemainderState
 from syncode.parsers.incremental_parser import IncrementalParser, ParseResult
@@ -53,7 +52,9 @@ class GrammarConstrainer:
                 batch_size=1,
                 dev_mode=False,
                 parser='lalr',
-                mode='grammar_mask'):
+                mode='grammar_mask',
+                indent=False
+                ):
         
         self.tokenizer = tokenizer
         self.byte_tokenizer = byte_tokenizer
@@ -82,6 +83,7 @@ class GrammarConstrainer:
                                     tokenizer=self.tokenizer, 
                                     use_cache=use_cache, 
                                     mode=mode,  # Controls approximation strategy for token masking
+                                    indent=indent
                                     )
 
 
