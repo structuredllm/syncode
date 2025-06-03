@@ -59,7 +59,8 @@ class MaskStore:
             self._vocab, 
             eos_token_id=self.eos_token_id,
             special_token_ids=self.special_token_ids, 
-            indent=indent, mode=mode
+            indent=indent, 
+            mode=mode
             )
         terminal_names = [terminal.name for terminal in terminals]
 
@@ -106,8 +107,10 @@ class MaskStore:
         if use_cache and os.path.exists(fsm_path):
             try:
                 with open(fsm_path, 'rb') as f:
-                    mask_store = pickle.load(f)
-                    return mask_store
+                    mask_store: MaskStore = pickle.load(f)
+                    if mask_store.indentation == indent:
+                        return mask_store
+                    
             except Exception as e:
                 logger.warning(f"Error loading mask store: {e}")
                 

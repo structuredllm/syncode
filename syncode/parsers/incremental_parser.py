@@ -166,9 +166,20 @@ class IncrementalParser:
             self._handle_parsing_error(lexer_tokens, token, e)
 
         # Compute current terminal string
-        remainder_state, current_term_str, final_terminal = self._get_remainder(partial_code, lexing_incomplete=lexing_incomplete, parse_incomplete=parse_incomplete)            
+        remainder_state, current_term_str, final_terminal = self._get_remainder(
+            partial_code, 
+            lexing_incomplete=lexing_incomplete, 
+            parse_incomplete=parse_incomplete
+            )            
         
-        return ParseResult.from_accept_terminals(self.cur_ac_terminals, self.next_ac_terminals, current_term_str, remainder_state, final_terminal=final_terminal, ignore_terminals=self.base_parser.lexer_conf.ignore)
+        return ParseResult.from_accept_terminals(
+            self.cur_ac_terminals, 
+            self.next_ac_terminals, 
+            current_term_str, 
+            remainder_state, 
+            final_terminal=final_terminal, 
+            ignore_terminals=self.base_parser.lexer_conf.ignore)
+
 
     def _get_remainder(self, code, lexing_incomplete=False, parse_incomplete=False):
         final_terminal = None
