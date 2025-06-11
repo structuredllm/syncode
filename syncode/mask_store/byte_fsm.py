@@ -341,18 +341,14 @@ class ByteFSM:
             if not state_transitions:  # No transitions - dead state
                 break
             
-            # Direct byte transition - most common case first
-            if byte in state_transitions:
-                cur_state = state_transitions[byte]
+            # Only get category if needed - reduces _get_category calls
+            category = self._get_category(byte)
+            if category is not None and category in state_transitions:
+                cur_state = state_transitions[category]
             else:
-                # Only get category if needed - reduces _get_category calls
-                category = self._get_category(byte)
-                if category is not None and category in state_transitions:
-                    cur_state = state_transitions[category]
-                else:
-                    # No valid transition - we've reached a "dead" state
-                    cur_state = None
-                    break
+                # No valid transition - we've reached a "dead" state
+                cur_state = None
+                break
             
             # Check if we're in a final state - using cached method
             if is_final(cur_state):
