@@ -1,10 +1,20 @@
-start: compilation_unit
+start: compilation_unit 
 
 %import common.CNAME
 %import common.DIGIT
 %import common.WS
 
 %ignore WS
+
+LINE_COMMENT: /\/\/[^\n\r]*/
+BLOCK_COMMENT: /\/\*[\s\S]*?\*\//
+
+type_parameters: "<" type_parameter ("," type_parameter)* ">"
+type_parameter: CNAME type_bound?
+type_bound: "extends" type ("&" type)*
+
+%ignore LINE_COMMENT
+%ignore BLOCK_COMMENT
 
 compilation_unit: package_declaration? import_declarations? type_declarations?
 
@@ -30,7 +40,15 @@ interface_type: class_or_interface_type
 
 class_type: class_or_interface_type
 
-class_or_interface_type: name
+class_or_interface_type: name type_arguments?
+
+type_arguments: "<" type_argument ("," type_argument)* ">" | diamond_operator
+
+diamond_operator: "<" ">"
+
+type_argument: type | wildcard 
+
+wildcard: "?" ( "extends" type | "super" type )?
 
 class_body: "{" class_body_declarations "}" | "{" "}"
 
@@ -48,7 +66,7 @@ variable_initializer: expression | array_initializer
 
 method_declaration: method_header method_body
 
-method_header: modifiers? type method_declarator throws?
+method_header: modifiers? type_parameters? type method_declarator throws?
 
 method_declarator: CNAME "(" formal_parameter_list? ")"
 
@@ -128,7 +146,11 @@ while_statement: "while" "(" expression ")" statement
 
 do_statement: "do" statement "while" "(" expression ")" ";"
 
-for_statement: "for" "(" for_init? ";" expression? ";" for_update? ")" statement
+for_statement: "for" "(" for_each  ")" statement| "for" "(" for_traditional ")" statement
+
+for_each: type CNAME ":" expression
+
+for_traditional: for_init? ";" expression? ";" for_update?
 
 for_init: statement_expression_list | local_variable_declaration
 
@@ -166,7 +188,7 @@ floating_point_literal: DIGIT+ "." DIGIT+
 
 boolean_literal: "true" | "false"
 
-character_literal: "/'[^\n\r']?'/"
+character_literal: "'" /[^\\'\n\r]/ "'"
 
 string_literal: /".*?"/
 
@@ -183,6 +205,8 @@ dim_exprs: dim_expr+
 dim_expr: "[" expression "]"
 
 dims: "[" "]"+
+
+
 
 field_access: primary "." CNAME | "super" "." CNAME
 
@@ -204,7 +228,10 @@ pre_decrement_expression: "--" unary_expression
 
 unary_expression_not_plus_minus: postfix_expression | "~" unary_expression | "!" unary_expression | cast_expression
 
-cast_expression: "(" primitive_type dims? ")" unary_expression | "(" primitive_type ")" unary_expression | "(" expression ")" unary_expression_not_plus_minus | "(" name dims? ")" unary_expression_not_plus_minus
+cast_expression: "(" primitive_type dims? ")" unary_expression 
+    | "(" primitive_type ")" unary_expression 
+    | "(" expression ")" unary_expression_not_plus_minus 
+    | "(" name dims? ")" unary_expression_not_plus_minus
 
 multiplicative_expression: unary_expression | multiplicative_expression "*" unary_expression | multiplicative_expression "/" unary_expression | multiplicative_expression "%" unary_expression
 
@@ -236,7 +263,13 @@ left_hand_side: name | field_access | array_access
 
 assignment_operator: "=" | "*=" | "/=" | "%=" | "+=" | "-=" | "<<=" | ">>=" | ">>>=" | "&=" | "^=" | "|="
 
-expression: assignment_expression
+expression: assignment_expression | lambda_expression
+
+lambda_expression: lambda_parameters "->" lambda_body
+
+lambda_parameters: CNAME | "(" ")" | "(" CNAME ("," CNAME)* ")"
+
+lambda_body: expression | block
 
 constant_expression: expression
 
@@ -255,3 +288,4 @@ floating_point_type: "float" | "double"
 reference_type: class_or_interface_type | array_type
 
 array_type: primitive_type dims | name dims | array_type dims
+
