@@ -389,3 +389,7 @@ public """
         r = inc_parser.get_acceptable_next_terminals(partial_code)
         assert AcceptSequence(['CLASS']) in r.accept_sequences
         assert r.remainder_state == RemainderState.COMPLETE
+
+if __name__ == '__main__':
+    unittest.main()
+    

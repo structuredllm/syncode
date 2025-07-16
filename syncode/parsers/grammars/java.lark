@@ -1,20 +1,8 @@
 start: compilation_unit 
 
-%import common.CNAME
-%import common.DIGIT
-%import common.WS
-
-%ignore WS
-
-LINE_COMMENT: /\/\/[^\n\r]*/
-BLOCK_COMMENT: /\/\*[\s\S]*?\*\//
-
 type_parameters: "<" type_parameter ("," type_parameter)* ">"
 type_parameter: CNAME type_bound?
 type_bound: "extends" type ("&" type)*
-
-%ignore LINE_COMMENT
-%ignore BLOCK_COMMENT
 
 compilation_unit: package_declaration? import_declarations? type_declarations?
 
@@ -188,7 +176,7 @@ floating_point_literal: DIGIT+ "." DIGIT+
 
 boolean_literal: "true" | "false"
 
-character_literal: "'" /[^\\'\n\r]/ "'"
+character_literal: /'([^'\r\n\\]|\\([btnfr"'\\0-7]|[0-3]?[0-7]{2})|\\u[0-9a-fA-f]{4})'/
 
 string_literal: /".*?"/
 
@@ -205,8 +193,6 @@ dim_exprs: dim_expr+
 dim_expr: "[" expression "]"
 
 dims: "[" "]"+
-
-
 
 field_access: primary "." CNAME | "super" "." CNAME
 
@@ -289,3 +275,12 @@ reference_type: class_or_interface_type | array_type
 
 array_type: primitive_type dims | name dims | array_type dims
 
+LINE_COMMENT: /\/\/[^\n\r]*/
+BLOCK_COMMENT: /\/\*[\s\S]*?\*\//
+
+%import common.CNAME
+%import common.DIGIT
+%import common.WS
+%ignore WS
+%ignore LINE_COMMENT
+%ignore BLOCK_COMMENT
