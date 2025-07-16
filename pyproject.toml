@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "syncode"
-version="0.4.15"
+version="0.4.16"
 requires-python = ">=3.6,<3.13"
 description = "Grammar-guided code generation tool"
 readme = "README.md"
