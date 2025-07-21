@@ -49,7 +49,7 @@ class Grammar:
             # Simplifications for python
             python_simplifications = {
                             'COMMENT': '(?i:(?s:(#.*|\'\'\'.*?\'\'\'|""".*?""")))', 
-                            '_NL': '(?s:(?i:\n(.*)))', 
+                            '_NL': '(?s:(?i:\n))', 
                             'LONG_STRING': '(?i:(?s:(\'\'\'.*?\'\'\'|""".*?""")))', 
                             'STRING': '(?s:(?i:[ubf]?r?(".*?"|\'.*?\')))'
                             }
