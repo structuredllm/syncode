@@ -192,7 +192,7 @@ dim_exprs: dim_expr+
 
 dim_expr: "[" expression "]"
 
-dims: "[" "]"+
+dims: ("[" "]")+
 
 field_access: primary "." CNAME | "super" "." CNAME
 
