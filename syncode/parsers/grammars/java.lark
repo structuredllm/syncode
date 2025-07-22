@@ -178,7 +178,7 @@ boolean_literal: "true" | "false"
 
 character_literal: /'([^'\r\n\\]|\\([btnfr"'\\0-7]|[0-3]?[0-7]{2})|\\u[0-9a-fA-f]{4})'/
 
-string_literal: /".*?"/
+string_literal: /"([^"\r\n\\]|\\([btnfr"'\\0-7]|[0-3]?[0-7]{2})|\\u[0-9a-fA-f]{4})*"/
 
 null_literal: "null"
 
