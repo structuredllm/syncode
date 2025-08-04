@@ -1,7 +1,7 @@
 accelerate
 fire
 interegular
-regex==2024.11.6
+regex==2025.7.34
 torch
 tqdm
 transformers==4.53.2; python_version < "3.13"
