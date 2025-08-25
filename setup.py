@@ -11,7 +11,7 @@ requirements = [
     "regex==2024.11.6",
     "torch",
     "tqdm",
-    "transformers==4.53.2",
+    "transformers==4.55.4",
     "datasets",
     "jsonschema"
 ]
