@@ -165,7 +165,7 @@ slice_type: "[" "]" element_type
 // It's possible to replace `type` with more restricted type_lit list and also pay attention to nil maps
 map_type: "map" "[" type_ "]" element_type
 
-channel_type: ("'chan"  | "chan"   "<-" |  "<-" "chan" ) element_type
+channel_type: ("chan"  | "chan"   "<-" |  "<-" "chan" ) element_type
 
 method_spec: NAME parameters result | NAME parameters
 
@@ -214,7 +214,7 @@ HEX_LIT.2: /0x[\da-f]*/i
 OCTAL_LIT.2: /0o[0-7]*/i
 BINARY_LIT.2 : /0b[0-1]*/i
 FLOAT_LIT.2: /((\d+\.\d*|\.\d+)(e[-+]?\d+)?|\d+(e[-+]?\d+))/i
-CHAR_LIT: /'.'/i
+CHAR_LIT: /'/ (/[^'\\]/ | ESCAPED_VALUE) /'/
 
 composite_lit: literal_type literal_value
 
@@ -239,8 +239,10 @@ string_: RAW_STRING_LIT | INTERPRETED_STRING_LIT
 // RAW_STRING_LIT         : '`' ~'`'*                      '`' -> mode(NLSEMI);
 // INTERPRETED_STRING_LIT : '"' (~["\\] | ESCAPED_VALUE)*  '"' -> mode(NLSEMI);
 
-RAW_STRING_LIT: /`.*?`/
-INTERPRETED_STRING_LIT: /".*?"/i
+RAW_STRING_LIT: /`.*?`/s
+INTERPRETED_STRING_LIT: /"/ (/[^"\\]/ | ESCAPED_VALUE)* /"/
+
+ESCAPED_VALUE: /\\(u[0-9a-fA-F]{4}|U[0-9a-fA-F]{8}|[abfnrtv\\'"]|[0-7]{3}|x[0-9a-fA-F]{2})/
 
 embedded_field: "*"? (NAME "." NAME | NAME)  type_args?
 
@@ -259,7 +261,7 @@ arguments: "(" ( expression_list? "..."? ","?)? ")"
 eos: ";" | EOS // | {this.closingBracket()}?
 	
 NAME : /[a-zA-Z_]\w*/
-EOS: _NL | ";" | "/*' .*? '*/"       
+EOS: _NL | ";" | /\/\*.*?\*\//s
 
 COMMENT : /\/\/[^\n]*/ 
 _NL: ( /(\r?\n[\t ]*)+/ | COMMENT)+
