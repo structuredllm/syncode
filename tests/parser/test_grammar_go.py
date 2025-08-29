@@ -97,9 +97,9 @@ func main() {{
 
     def test_go_parser4(self):
         inc_parser.reset()
-        partial_code =  'package main\n\nimport (\n\t"encoding/json"\n\t"reflect"\n)\n// You\'re an expert Golang programmer\n// Check if in given list of numbers, are any two numbers closer to each other than\n// given threshold.\n// >>> has_close_elements([1.0, 2.0, 3.0], 0.5)\n// False\n// >>> has_close_elements([1.0, 2.8, 3.0, 4.0, 5.0, 2.0], 0.3)\n// True\n// \nfunc has_close_elements (numbers []float64, threshold float64) bool {\n\n  // 1. '
+        partial_code =  'package main\n\nimport (\n\t"encoding/json"\n\t"reflect"\n)\n// You\'re an expert Golang programmer\n// Check if in given list of numbers, are any two numbers closer to each other than\n// given threshold.\n// >>> has_close_elements([1.0, 2.0, 3.0], 0.5)\n// False\n// >>> has_close_elements([1.0, 2.8, 3.0, 4.0, 5.0, 2.0], 0.3)\n// True\n// \nfunc has_close_elements (numbers []float64, threshold float64) bool {\n\n  // 1. \n'
         res = inc_parser.get_acceptable_next_terminals(partial_code)
-        self.assertEqual('\n\n  // 1. ', res.remainder)
+        self.assertEqual('// 1. \n', res.remainder)
 
     def test_go_parser5(self):
         inc_parser.reset()
@@ -166,14 +166,14 @@ func main() {{
         inc_parser.reset()
         partial_code = 'package main\n\nimport (\n\t"encoding/json"\n\t"reflect"\n)\n// You\'re an expert Golang programmer\n// Out of list of strings, return the longest one. Return the first one in case of multiple\n// strings of the same length. Return None in case the input list is empty.\n// >>> longest([])\n// \n// >>> longest([\'a\', \'b\', \'c\'])\n// \'a\'\n// >>> longest([\'a\', \'bb\', \'ccc\'])\n// \'ccc\'\n// \nfunc longest (strings []string) interface{} {\n\t'
         res = inc_parser.get_acceptable_next_terminals(partial_code)
-        self.assertIn(AcceptSequence(['EOS', 'IF']), res.accept_sequences)
+        self.assertIn(AcceptSequence(['NL', 'IF']), res.accept_sequences)
 
     def test_go_parser15(self):
         inc_parser.reset()
         partial_code = 'package main\n\nimport (\n\t"encoding/json"\n\t"reflect"\n)\nfunc numerical_letter_grade (grades []interface{}) []string {\n\tletter_grades := make([]string, len(grades))\n\tfor i, grade := range grades {\n\t\tswitch grade.('
         res = inc_parser.get_acceptable_next_terminals(partial_code)
         self.assertIn(AcceptSequence(['LPAR', 'TYPE']), res.accept_sequences)
-        self.assertIn(AcceptSequence(['LPAR', '__IGNORE_0', 'NAME']), res.accept_sequences)
+        self.assertIn(AcceptSequence(['LPAR', 'IGNORED', 'NAME']), res.accept_sequences)
 
     def test_go_parser16(self):
         inc_parser.reset()
