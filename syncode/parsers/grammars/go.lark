@@ -23,74 +23,74 @@
 //  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN "if"  ADVISED OF THE
 //  POSSIBILITY OF SUCH DAMAGE.
 
-start: package_clause eos (import_decl eos)* ((function_decl | method_decl | declaration) eos "eoc"?)*
+start: nls? package_clause eos (import_decl eos)* ((function_decl | method_decl | declaration) eos)*
 
-package_clause: "package" NAME
+package_clause: "package" nls? NAME
 
-import_decl: "import"  (import_spec | "(" (import_spec eos)* ")")
+import_decl: "import" nls? (import_spec | "(" nls? ((import_spec eos)* import_spec eos?)? ")")
 
-import_spec: ("." | NAME)? import_path
+import_spec: ("." nls? | NAME)? import_path
 
 import_path: string_
 
 declaration: const_decl | type_decl | var_decl
 
-const_decl: "const"  (const_spec | "(" (const_spec eos)* ")")
+const_decl: "const" nls? (const_spec | "(" nls? ((const_spec eos)* const_spec eos?)? ")")
 
-const_spec: identifier_list (type_? "=" expression_list)?
+const_spec: (identifier_list | NAME) (type_? "=" nls? expression_list)?
 
-identifier_list: NAME ("," NAME)*
+identifier_list: NAME ("," nls? NAME)+
 
-expression_list: expression ("," expression)*
+expression_list: expression ("," nls? expression)*
 
-type_decl: "type" (type_spec | "(" (type_spec eos)* ")")
+type_decl: "type" nls? (type_spec | "(" nls? ((type_spec eos)* type_spec eos?)? ")")
 
 type_spec: alias_decl | type_def
 
-alias_decl : NAME "=" type_
+alias_decl : NAME "=" nls? type_
 
 type_def : NAME type_parameters? type_
 
-type_parameters : "[" type_parameter_decl ("," type_parameter_decl)* "]"
+type_parameters : "[" nls? type_parameter_decl ("," nls? type_parameter_decl)* "]"
 
-type_parameter_decl : identifier_list type_element
+type_parameter_decl : (identifier_list | NAME) type_element
 
-type_element : type_term ("|" type_term)*
+type_element : type_term ("|" nls? type_term)*
 
-type_term : "~"? type_
+type_term : ("~" nls?)? type_
 
 // Function declarations
 
-function_decl: "func" NAME type_parameters? signature ("{" statement_list? "}" ["eof"])? 
+function_decl: "func" nls? NAME type_parameters? signature block? 
 // eof: "}" // This indicates end of function body
 
-method_decl: "func" receiver NAME signature block?
+method_decl: "func" nls? receiver NAME signature block?
 
 receiver: parameters
 
-var_decl: "var" (var_spec | "(" (var_spec eos)* ")")
+var_decl: "var" nls? (var_spec | "(" nls? ((var_spec eos)* var_spec eos?)? ")")
 
-var_spec: identifier_list (type_ ("=" expression_list)? | "=" expression_list)
+var_spec: (identifier_list | NAME) (type_ ("=" nls? expression_list)? | "=" nls? expression_list)
 
-block: "{" statement_list? "}"
+block: "{" nls? ((statement? eos)* statement? eos?)? "}"
 
-statement_list: ((";"? | EOS?) statement eos)+
+// statement_list: (statement? eos)* statement
 
 statement: declaration | labeled_stmt | simple_stmt | go_stmt | return_stmt | break_stmt | continue_stmt | goto_stmt | fallthrough_stmt | block | if_stmt | switch_stmt | select_stmt | for_stmt | defer_stmt
 
 simple_stmt: send_stmt | inc_dec_stmt | assignment | expression | short_var_decl
 
-send_stmt: expression  "<-" expression
+send_stmt: expression "<-" nls? expression
 
 inc_dec_stmt: expression ("++" | "--")
 
-assignment: expression assign_op expression | expression_list "=" expression_list
+assignment: expression assign_op nls? expression | expression_list "=" nls? expression_list
 
 assign_op: "+=" | "-=" | "|=" | "^=" | "*=" | "/=" | "%=" | "<<=" | ">>=" | "&=" | "&^="
 
-short_var_decl: expression_list ":=" expression_list
+short_var_decl: expression_list ":=" nls? expression_list
 
-labeled_stmt: NAME ":" statement?
+labeled_stmt: NAME ":"
 
 return_stmt: "return" expression_list?
 
@@ -98,84 +98,84 @@ break_stmt: "break" NAME?
 
 continue_stmt: "continue" NAME?
 
-goto_stmt: "goto"  NAME
+goto_stmt: "goto" nls? NAME
 
 fallthrough_stmt: "fallthrough" 
 
-defer_stmt: "defer" expression
+defer_stmt: "defer" nls? expression
 
-if_stmt: "if"  ( expression | eos expression | simple_stmt eos expression) block ("else" (if_stmt | block))?
+if_stmt: "if" nls? (simple_stmt? eos)? expression block ("else" nls? (if_stmt | block))?
 
 switch_stmt: expr_switch_stmt | type_switch_stmt
 
-expr_switch_stmt: "switch"  (expression? | simple_stmt? eos expression?) "{" expr_case_clause* "}"
+expr_switch_stmt: "switch" nls? (simple_stmt? eos)? expression? "{" nls? ((expr_case_clause | statement? eos)* (expr_case_clause | statement? eos?))? "}"
 
-expr_case_clause: expr_switch_case ":" statement_list?
+expr_case_clause: expr_switch_case ":" nls?
 
-expr_switch_case: "case" expression_list | "default"
+expr_switch_case: "case" nls? expression_list | "default" nls?
 
-type_switch_stmt: "switch"  ( type_switch_guard | eos type_switch_guard | simple_stmt eos type_switch_guard) "{" type_case_clause* "}"
+type_switch_stmt: "switch" nls? (simple_stmt? eos)? type_switch_guard "{" nls? ((type_case_clause | statement? eos)* (type_case_clause | statement? eos?))? "}"
 
 // type_switch_guard: (NAME ":=")? primary_expr "." "(" "type"  ")"
-type_switch_guard: (NAME ":=")? NAME "." "(" "type"  ")"
+type_switch_guard: (NAME ":=" nls?)? NAME "." nls? "(" nls? "type" nls? ")"
 
-type_case_clause: type_switch_case ":" statement_list?
+type_case_clause: type_switch_case ":" nls?
 
-type_switch_case: "case" type_list | "default"
+type_switch_case: "case" nls? type_list | "default" nls?
 
-type_list: (type_ | "nil" ) ("," (type_ | "nil"  ))*
+type_list: type_ ("," nls? type_)*
 
-select_stmt: "select" "{" comm_clause* "}"
+select_stmt: "select" nls? "{" nls? ((comm_clause | statement? eos)* (comm_clause | statement? eos?))? "}"
 
-comm_clause: comm_case ":" statement_list?
+comm_clause: comm_case ":" nls?
 
-comm_case: "case" (send_stmt | recv_stmt) | "default"
+comm_case: "case" nls? (send_stmt | recv_stmt) | "default" nls?
 
-recv_stmt: (expression_list "=" | identifier_list ":=")? expression
+recv_stmt: (expression_list "=" nls? | (identifier_list | NAME) ":=" nls?)? expression
 
-for_stmt: "for" [for_clause] block
+for_stmt: "for" nls? [for_clause] block
 
 for_clause: simple_stmt (eos expression eos simple_stmt)? | range_clause
 
-range_clause: (expression_list "=" | expression_list ":=") "range"  expression
+range_clause: (expression_list "=" nls? | expression_list ":=" nls?) "range" nls? expression
 
-go_stmt: "go"expression
+go_stmt: "go" nls? expression
 
-type_: literal_type | var_or_type_name type_args? | "(" type_ ")" 
+type_: literal_type | (var_or_type_name | NAME) type_args? | "(" nls? type_ ")" 
 
 // type_lit: array_type | struct_type | pointer_type | function_type | interface_type | slice_type | map_type | channel_type
 
 type_args : "--"
-// type_args: "[" type_list ","? "]"   // This is useful for Golng gen
+// type_args: "[" nls? type_list ("," nls?)? "]"   // This is useful for Golng gen
 
-var_or_type_name: NAME "." NAME | NAME | NAME "." "(" type_ ")"
+var_or_type_name: NAME "." nls? NAME | NAME "." nls? "(" nls? type_ ")"
 
-array_type: "[" array_length "]" element_type
+array_type: "[" nls? array_length "]" element_type
 
 array_length: expression
 
 element_type: type_
 
-pointer_type: "*" type_
+pointer_type: "*" nls? type_
 
-interface_type: "interface" "{" ((method_spec | type_element ) eos)* "}"
+interface_type: "interface" nls? "{" nls? (((method_spec | type_element ) eos)* (method_spec | type_element ) eos?)? "}"
 
-slice_type: "[" "]" element_type
+slice_type: "[" nls? "]" element_type
 
 // It's possible to replace `type` with more restricted type_lit list and also pay attention to nil maps
-map_type: "map" "[" type_ "]" element_type
+map_type: "map" nls? "[" nls? type_ "]" element_type
 
-channel_type: ("chan"  | "chan"   "<-" |  "<-" "chan" ) element_type
+channel_type: ("chan" | "chan" nls?  "<-" |  "<-" nls? "chan" ) nls? element_type
 
-method_spec: NAME parameters result | NAME parameters
+method_spec: NAME signature
 
-function_type: "func" signature
+function_type: "func" nls? signature
 
 signature: parameters result?
 
 result: parameters | type_
 
-parameters: "(" parameter_decl ("," parameter_decl)* ","? ")" | "(" ")" 
+parameters: "(" nls? parameter_decl ("," nls? parameter_decl)* ("," nls?)? ")" | "(" nls? ")" 
 
 // a comma-separated list of either (a) name, (b) type, or (c) name and type 
 // https://groups.google.com/g/golang-nuts/c/jVjbH2-emMQ/m/UdZlSNhd3DwJ
@@ -183,28 +183,28 @@ parameters: "(" parameter_decl ("," parameter_decl)* ","? ")" | "(" ")"
 // parameter_decl: (NAME | "..."? type_ | NAME type_)
 
 // Although following is overapproximate it's an easy way to avoid reduce/reduce conflicts
-parameter_decl: (type_ | "..."? type_ | NAME type_)
+parameter_decl: (type_ | ("..." nls?)? type_ | NAME type_)
 
 
 expression: primary_expr 
-            | ("+" | "-" | "!" | "^" | "*" | "&" | "<-") expression 
-            | expression ("*" | "/" | "%" | "<<" | ">>" | "&" | "&^") expression 
-            | expression ("+" | "-" | "|" | "^") expression 
-            | expression ("==" | "!=" | "<" | "<=" | ">" | ">=") expression 
-            | expression "&&" expression 
-            | expression "||" expression
+            | ("+" | "-" | "!" | "^" | "*" | "&" | "<-") nls? expression 
+            | expression ("*" | "/" | "%" | "<<" | ">>" | "&" | "&^") nls? expression 
+            | expression ("+" | "-" | "|" | "^") nls? expression 
+            | expression ("==" | "!=" | "<" | "<=" | ">" | ">=") nls? expression 
+            | expression "&&" nls? expression 
+            | expression "||" nls? expression
 
-primary_expr: operand | primary_expr ("." (NAME | "(" type_ ")") | index | slice_ | arguments) | type_
+primary_expr: operand | primary_expr ("." nls? (NAME | "(" nls? type_ ")") | index | slice_ | arguments)
 
 // conversion is not needed since a method call has includes this syntax
 // conversion: type_ "(" expression ","? ")"
 
 // Giving operand higher precedence than type_ is a hack to avoid reduce/reduce conflicts
-operand.3: literal | NAME | "(" expression ")" // removed NAME type_args?
+operand: literal | type_ | "(" expression ")" // removed NAME type_args?
 
 literal: basic_lit | composite_lit | function_lit
 
-basic_lit: "nil" | integer | string_ | FLOAT_LIT | CHAR_LIT
+basic_lit: integer | string_ | FLOAT_LIT | CHAR_LIT
 
 integer: DECIMAL_LIT | BINARY_LIT | OCTAL_LIT | HEX_LIT
 // integer: DECIMAL_LIT | BINARY_LIT | OCTAL_LIT | HEX_LIT | IMAGINARY_LIT | RUNE_LIT
@@ -218,55 +218,56 @@ CHAR_LIT: /'/ (/[^'\\]/ | ESCAPED_VALUE) /'/
 
 composite_lit: literal_type literal_value
 
-literal_type: struct_type | array_type | "[" "..." "]" element_type | slice_type | map_type  | "interface" "{" "}"
+literal_type: struct_type | array_type | "[" nls? "..." nls? "]" element_type | slice_type | map_type  | "interface" nls? "{" nls? "}"
 
-literal_value: "{" (element_list ","?)? "}"
+literal_value: "{" nls? (element_list ("," nls?)?)? "}"
 
-element_list: keyed_element ("," keyed_element)*
+element_list: keyed_element ("," nls? keyed_element)*
 
-keyed_element: (key ":")? element
+keyed_element: (key ":" nls?)? element
 
 key: expression | literal_value
 
 element: expression | literal_value
 
-struct_type: "struct" "{" (field_decl eos)* "}"
+struct_type: "struct" nls? "{" nls? ((field_decl eos)* field_decl eos?)? "}"
 
-field_decl: (identifier_list type_ | embedded_field) string_?
+field_decl: ((identifier_list | NAME) type_ | embedded_field) string_?
 
 string_: RAW_STRING_LIT | INTERPRETED_STRING_LIT
 
 // RAW_STRING_LIT         : '`' ~'`'*                      '`' -> mode(NLSEMI);
 // INTERPRETED_STRING_LIT : '"' (~["\\] | ESCAPED_VALUE)*  '"' -> mode(NLSEMI);
 
-RAW_STRING_LIT: /`.*?`/s
+RAW_STRING_LIT: /`[^`]*`/s
 INTERPRETED_STRING_LIT: /"/ (/[^"\\]/ | ESCAPED_VALUE)* /"/
 
 ESCAPED_VALUE: /\\(u[0-9a-fA-F]{4}|U[0-9a-fA-F]{8}|[abfnrtv\\'"]|[0-7]{3}|x[0-9a-fA-F]{2})/
 
-embedded_field: "*"? (NAME "." NAME | NAME)  type_args?
+embedded_field: ("*" nls?)? (NAME "." nls? NAME | NAME)  type_args?
 
-function_lit: "func" signature block // function
+function_lit: "func" nls? signature block // function
 
-index: "[" expression "]"
+index: "[" nls? expression ("," nls?)? "]"
 
-slice_: "[" ( expression? ":" expression? | expression? ":" expression ":" expression) "]"
+slice_: "[" nls? ( expression? ":" nls? expression? | expression? ":" nls? expression ":" nls? expression) "]"
 
-type_assertion: "." "(" type_ ")"
+type_assertion: "." nls? "(" nls? type_ ")"
 
 // arguments: "(" ( (expression_list | type_ ("," expression_list)?) "..."? ","?)? ")"
-arguments: "(" ( expression_list? "..."? ","?)? ")"
+arguments: "(" nls? ( expression_list? ("..." nls?)? ("," nls?)?)? ")"
 // method_expr: type_ "." NAME
 
-eos: ";" | EOS // | {this.closingBracket()}?
+eos: semi | nls
+semi: ";" NL*
+nls: NL+
 	
 NAME : /[a-zA-Z_]\w*/
-EOS: _NL | ";" | /\/\*.*?\*\//s
 
-COMMENT : /\/\/[^\n]*/ 
-_NL: ( /(\r?\n[\t ]*)+/ | COMMENT)+
+COMMENT : /\/\/[^\n]*\n/
+NL: COMMENT | /(\r?\n[\t ]*)+/ | /\/\*[^\n]*\n.*?\*\//s
 
 // %import common.WS_INLINE
 // %ignore WS_INLINE
-%ignore /[\t ]/
-%ignore /\\[\t \f]*\r?\n/   // LINE_CONT
+IGNORED: /[\t ]/ | /\/\*[^\n]*?\*\//
+%ignore IGNORED
