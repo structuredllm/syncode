@@ -72,7 +72,7 @@ var_decl: "var" nls? (var_spec | "(" nls? ((var_spec eos)* var_spec eos?)? ")")
 
 var_spec: (identifier_list | NAME) (type_ ("=" nls? expression_list)? | "=" nls? expression_list)
 
-block: "{" nls? ((statement? eos)* statement eos?)? "}"
+block: "{" nls? ((statement? eos)* statement? eos?)? "}"
 
 // statement_list: (statement? eos)* statement
 
