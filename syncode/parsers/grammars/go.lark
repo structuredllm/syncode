@@ -301,7 +301,7 @@ nls: NL+
 NAME : /[a-zA-Z_]\w*/
 
 COMMENT : /\/\/[^\n]*\n/
-NL: COMMENT | /(\r?\n[\t ]*)+/ | /\/\*[^\n]*\n(\*+[^*\/]|[^*])*\*+\//s
+NL: COMMENT | /(\r?\n[\t ]*)+/ | /\/\*(\*+[^*\/\n]|[^*\n])*\**\n(\*+[^*\/]|[^*])*\*+\//s
 
 // %import common.WS_INLINE
 // %ignore WS_INLINE
