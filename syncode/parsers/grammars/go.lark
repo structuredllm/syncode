@@ -25,54 +25,54 @@
 
 start: nls? package_clause eos (import_decl eos)* ((function_decl | method_decl | declaration) eos)*
 
-package_clause: "package" nls? NAME
+package_clause: package_token NAME
 
-import_decl: "import" nls? (import_spec | "(" nls? ((import_spec eos)* import_spec eos?)? ")")
+import_decl: import_token (import_spec | lparen_token ((import_spec eos)* import_spec eos?)? ")")
 
-import_spec: ("." nls? | NAME)? import_path
+import_spec: (dot_token | NAME)? import_path
 
 import_path: string_
 
 declaration: const_decl | type_decl | var_decl
 
-const_decl: "const" nls? (const_spec | "(" nls? ((const_spec eos)* const_spec eos?)? ")")
+const_decl: const_token (const_spec | lparen_token ((const_spec eos)* const_spec eos?)? ")")
 
-const_spec: (identifier_list | NAME) (type_? "=" nls? expression_list)?
+const_spec: (identifier_list | NAME) (type_? equal_token expression_list)?
 
-identifier_list: NAME ("," nls? NAME)+
+identifier_list: NAME (comma_token NAME)+
 
-expression_list: expression ("," nls? expression)*
+expression_list: expression (comma_token expression)*
 
-type_decl: "type" nls? (type_spec | "(" nls? ((type_spec eos)* type_spec eos?)? ")")
+type_decl: type_token (type_spec | lparen_token ((type_spec eos)* type_spec eos?)? ")")
 
 type_spec: alias_decl | type_def
 
-alias_decl : NAME "=" nls? type_
+alias_decl : NAME equal_token type_
 
 type_def : NAME type_parameters? type_
 
-type_parameters : "[" nls? type_parameter_decl ("," nls? type_parameter_decl)* "]"
+type_parameters : lsqrb_token type_parameter_decl (comma_token type_parameter_decl)* "]"
 
 type_parameter_decl : (identifier_list | NAME) type_element
 
-type_element : type_term ("|" nls? type_term)*
+type_element : type_term (or_token type_term)*
 
-type_term : ("~" nls?)? type_
+type_term : tilde_token? type_
 
 // Function declarations
 
-function_decl: "func" nls? NAME type_parameters? signature block? 
+function_decl: func_token NAME type_parameters? signature block? 
 // eof: "}" // This indicates end of function body
 
-method_decl: "func" nls? receiver NAME signature block?
+method_decl: func_token receiver NAME signature block?
 
 receiver: parameters
 
-var_decl: "var" nls? (var_spec | "(" nls? ((var_spec eos)* var_spec eos?)? ")")
+var_decl: var_token (var_spec | lparen_token ((var_spec eos)* var_spec eos?)? ")")
 
-var_spec: (identifier_list | NAME) (type_ ("=" nls? expression_list)? | "=" nls? expression_list)
+var_spec: (identifier_list | NAME) (type_ (equal_token expression_list)? | equal_token expression_list)
 
-block: "{" nls? ((statement? eos)* statement? eos?)? "}"
+block: lbrace_token ((statement? eos)* statement? eos?)? "}"
 
 // statement_list: (statement? eos)* statement
 
@@ -80,17 +80,17 @@ statement: declaration | labeled_stmt | simple_stmt | go_stmt | return_stmt | br
 
 simple_stmt: send_stmt | inc_dec_stmt | assignment | expression | short_var_decl
 
-send_stmt: expression "<-" nls? expression
+send_stmt: expression receive_token expression
 
 inc_dec_stmt: expression ("++" | "--")
 
-assignment: expression assign_op nls? expression | expression_list "=" nls? expression_list
+assignment: expression assign_op nls? expression | expression_list equal_token expression_list
 
 assign_op: "+=" | "-=" | "|=" | "^=" | "*=" | "/=" | "%=" | "<<=" | ">>=" | "&=" | "&^="
 
-short_var_decl: expression_list ":=" nls? expression_list
+short_var_decl: expression_list def_token expression_list
 
-labeled_stmt: NAME ":"
+labeled_stmt: NAME colon_token
 
 return_stmt: "return" expression_list?
 
@@ -98,84 +98,86 @@ break_stmt: "break" NAME?
 
 continue_stmt: "continue" NAME?
 
-goto_stmt: "goto" nls? NAME
+goto_stmt: goto_token NAME
 
 fallthrough_stmt: "fallthrough" 
 
-defer_stmt: "defer" nls? expression
+defer_stmt: defer_token expression
 
-if_stmt: "if" nls? (simple_stmt? eos)? expression block ("else" nls? (if_stmt | block))?
+if_stmt: if_token (simple_stmt? eos)? expression block (else_token (if_stmt | block))?
 
 switch_stmt: expr_switch_stmt | type_switch_stmt
 
-expr_switch_stmt: "switch" nls? (simple_stmt? eos)? expression? "{" nls? ((expr_case_clause | statement? eos)* (expr_case_clause | statement? eos?))? "}"
+expr_switch_stmt: switch_token (simple_stmt? eos)? expression? lbrace_token ((expr_case_clause | statement? eos)* (expr_case_clause | statement? eos?))? "}"
 
-expr_case_clause: expr_switch_case ":" nls?
+expr_case_clause: expr_switch_case colon_token
 
-expr_switch_case: "case" nls? expression_list | "default" nls?
+expr_switch_case: case_token expression_list | default_token
 
-type_switch_stmt: "switch" nls? (simple_stmt? eos)? type_switch_guard "{" nls? ((type_case_clause | statement? eos)* (type_case_clause | statement? eos?))? "}"
+type_switch_stmt: switch_token (simple_stmt? eos)? type_switch_guard lbrace_token ((type_case_clause | statement? eos)* (type_case_clause | statement? eos?))? "}"
 
 // type_switch_guard: (NAME ":=")? primary_expr "." "(" "type"  ")"
-type_switch_guard: (NAME ":=" nls?)? NAME "." nls? "(" nls? "type" nls? ")"
+type_switch_guard: (NAME def_token)? NAME dot_token lparen_token type_token ")"
 
-type_case_clause: type_switch_case ":" nls?
+type_case_clause: type_switch_case colon_token
 
-type_switch_case: "case" nls? type_list | "default" nls?
+type_switch_case: case_token type_list | default_token
 
-type_list: type_ ("," nls? type_)*
+type_list: type_ (comma_token type_)*
 
-select_stmt: "select" nls? "{" nls? ((comm_clause | statement? eos)* (comm_clause | statement? eos?))? "}"
+select_stmt: select_token lbrace_token ((comm_clause | statement? eos)* (comm_clause | statement? eos?))? "}"
 
-comm_clause: comm_case ":" nls?
+comm_clause: comm_case colon_token
 
-comm_case: "case" nls? (send_stmt | recv_stmt) | "default" nls?
+comm_case: case_token (send_stmt | recv_stmt) | default_token
 
-recv_stmt: (expression_list "=" nls? | (identifier_list | NAME) ":=" nls?)? expression
+recv_stmt: (expression_list equal_token | (identifier_list | NAME) def_token)? expression
 
-for_stmt: "for" nls? [for_clause] block
+for_stmt: for_token [for_clause] block
 
 for_clause: simple_stmt (eos expression eos simple_stmt)? | range_clause
 
-range_clause: (expression_list "=" nls? | expression_list ":=" nls?) "range" nls? expression
+range_clause: (expression_list equal_token | expression_list def_token) range_token expression
 
-go_stmt: "go" nls? expression
+go_stmt: go_token expression
 
-type_: literal_type | (var_or_type_name | NAME) type_args? | "(" nls? type_ ")" 
+type_: pointer_type | function_type | interface_type | channel_type | literal_type | (var_or_type_name | NAME) type_args? | lparen_token type_ ")" 
 
 // type_lit: array_type | struct_type | pointer_type | function_type | interface_type | slice_type | map_type | channel_type
 
 type_args : "--"
 // type_args: "[" nls? type_list ("," nls?)? "]"   // This is useful for Golng gen
 
-var_or_type_name: NAME "." nls? NAME | NAME "." nls? "(" nls? type_ ")"
+var_or_type_name: NAME dot_token NAME | NAME dot_token lparen_token type_ ")"
 
-array_type: "[" nls? array_length "]" element_type
+array_type: lsqrb_token array_length "]" element_type
 
 array_length: expression
 
 element_type: type_
 
-pointer_type: "*" nls? type_
+pointer_type.2: star_token type_
 
-interface_type: "interface" nls? "{" nls? (((method_spec | type_element ) eos)* (method_spec | type_element ) eos?)? "}"
+interface_type: interface_token lbrace_token (((method_spec | type_element ) eos)* (method_spec | type_element ) eos?)? "}"
 
-slice_type: "[" nls? "]" element_type
+slice_type: lsqrb_token "]" element_type
 
 // It's possible to replace `type` with more restricted type_lit list and also pay attention to nil maps
-map_type: "map" nls? "[" nls? type_ "]" element_type
+map_type: map_token lsqrb_token type_ "]" element_type
 
-channel_type: ("chan" | "chan" nls?  "<-" |  "<-" nls? "chan" ) nls? element_type
+channel_type: (channel_token | channel_prefix) element_type
+
+channel_prefix.2: channel_token receive_token | receive_token channel_token
 
 method_spec: NAME signature
 
-function_type: "func" nls? signature
+function_type: func_token signature
 
 signature: parameters result?
 
 result: parameters | type_
 
-parameters: "(" nls? parameter_decl ("," nls? parameter_decl)* ("," nls?)? ")" | "(" nls? ")" 
+parameters: lparen_token parameter_decl (comma_token parameter_decl)* comma_token? ")" | lparen_token ")" 
 
 // a comma-separated list of either (a) name, (b) type, or (c) name and type 
 // https://groups.google.com/g/golang-nuts/c/jVjbH2-emMQ/m/UdZlSNhd3DwJ
@@ -183,24 +185,23 @@ parameters: "(" nls? parameter_decl ("," nls? parameter_decl)* ("," nls?)? ")" |
 // parameter_decl: (NAME | "..."? type_ | NAME type_)
 
 // Although following is overapproximate it's an easy way to avoid reduce/reduce conflicts
-parameter_decl: (type_ | ("..." nls?)? type_ | NAME type_)
+parameter_decl: (type_ | dots_token? type_ | NAME type_)
 
 
 expression: primary_expr 
-            | ("+" | "-" | "!" | "^" | "*" | "&" | "<-") nls? expression 
-            | expression ("*" | "/" | "%" | "<<" | ">>" | "&" | "&^") nls? expression 
-            | expression ("+" | "-" | "|" | "^") nls? expression 
-            | expression ("==" | "!=" | "<" | "<=" | ">" | ">=") nls? expression 
-            | expression "&&" nls? expression 
-            | expression "||" nls? expression
+            | ("!" nls? | prefix_op nls? | star_token | receive_token) expression 
+            | expression (prefix_op nls? | infix_op nls? | star_token | or_token) expression 
 
-primary_expr: operand | primary_expr ("." nls? (NAME | "(" nls? type_ ")") | index | slice_ | arguments)
+prefix_op: "+" | "-" | "^" | "&"
+infix_op: "/" | "%" | "<<" | ">>" | "&^" | "==" | "!=" | "<" | "<=" | ">" | ">=" | "&&" | "||"
+
+primary_expr: operand | primary_expr (dot_token (NAME | lparen_token type_ ")") | index | slice_ | arguments)
 
 // conversion is not needed since a method call has includes this syntax
 // conversion: type_ "(" expression ","? ")"
 
 // Giving operand higher precedence than type_ is a hack to avoid reduce/reduce conflicts
-operand: literal | type_ | "(" expression ")" // removed NAME type_args?
+operand: literal | type_ | lparen_token expression ")" // removed NAME type_args?
 
 literal: basic_lit | composite_lit | function_lit
 
@@ -212,25 +213,25 @@ integer: DECIMAL_LIT | BINARY_LIT | OCTAL_LIT | HEX_LIT
 DECIMAL_LIT: /0|[1-9]\d*/i
 HEX_LIT.2: /0x[\da-f]*/i
 OCTAL_LIT.2: /0o[0-7]*/i
-BINARY_LIT.2 : /0b[0-1]*/i
+BINARY_LIT.2: /0b[0-1]*/i
 FLOAT_LIT.2: /((\d+\.\d*|\.\d+)(e[-+]?\d+)?|\d+(e[-+]?\d+))/i
 CHAR_LIT: /'/ (/[^'\\]/ | ESCAPED_VALUE) /'/
 
 composite_lit: literal_type literal_value
 
-literal_type: struct_type | array_type | "[" nls? "..." nls? "]" element_type | slice_type | map_type  | "interface" nls? "{" nls? "}"
+literal_type: struct_type | array_type | lsqrb_token dots_token "]" element_type | slice_type | map_type
 
-literal_value: "{" nls? (element_list ("," nls?)?)? "}"
+literal_value: lbrace_token (element_list comma_token?)? "}"
 
-element_list: keyed_element ("," nls? keyed_element)*
+element_list: keyed_element (comma_token keyed_element)*
 
-keyed_element: (key ":" nls?)? element
+keyed_element: (key colon_token)? element
 
 key: expression | literal_value
 
 element: expression | literal_value
 
-struct_type: "struct" nls? "{" nls? ((field_decl eos)* field_decl eos?)? "}"
+struct_type: struct_token lbrace_token ((field_decl eos)* field_decl eos?)? "}"
 
 field_decl: ((identifier_list | NAME) type_ | embedded_field) string_?
 
@@ -244,19 +245,54 @@ INTERPRETED_STRING_LIT: /"/ (/[^"\\]/ | ESCAPED_VALUE)* /"/
 
 ESCAPED_VALUE: /\\(u[0-9a-fA-F]{4}|U[0-9a-fA-F]{8}|[abfnrtv\\'"]|[0-7]{3}|x[0-9a-fA-F]{2})/
 
-embedded_field: ("*" nls?)? (NAME "." nls? NAME | NAME)  type_args?
+embedded_field: star_token? (NAME dot_token NAME | NAME)  type_args?
 
-function_lit: "func" nls? signature block // function
+function_lit: func_token signature block // function
 
-index: "[" nls? expression ("," nls?)? "]"
+index: lsqrb_token expression comma_token? "]"
 
-slice_: "[" nls? ( expression? ":" nls? expression? | expression? ":" nls? expression ":" nls? expression) "]"
+slice_: lsqrb_token ( expression? colon_token expression? | expression? colon_token expression colon_token expression) "]"
 
-type_assertion: "." nls? "(" nls? type_ ")"
+type_assertion: dot_token lparen_token type_ ")"
 
 // arguments: "(" ( (expression_list | type_ ("," expression_list)?) "..."? ","?)? ")"
-arguments: "(" nls? ( expression_list? ("..." nls?)? ("," nls?)?)? ")"
+arguments: lparen_token ( expression_list? dots_token? comma_token?)? ")"
 // method_expr: type_ "." NAME
+
+lparen_token: "(" nls?
+dot_token: "." nls?
+lsqrb_token: "[" nls?
+comma_token: "," nls?
+dots_token: "..." nls?
+package_token: "package" nls?
+import_token: "import" nls?
+const_token: "const" nls?
+equal_token: "=" nls?
+type_token: "type" nls?
+or_token: "|" nls?
+tilde_token: "~" nls?
+func_token: "func" nls?
+var_token: "var" nls?
+lbrace_token: "{" nls?
+receive_token: "<-" nls?
+def_token: ":=" nls?
+colon_token: ":" nls?
+channel_token: "chan" nls?
+goto_token: "goto" nls?
+defer_token: "defer" nls?
+if_token: "if" nls?
+else_token: "else" nls?
+switch_token: "switch" nls?
+case_token: "case" nls?
+default_token: "default" nls?
+for_token: "for" nls?
+select_token: "select" nls?
+range_token: "range" nls?
+go_token: "go" nls?
+star_token: "*" nls?
+interface_token: "interface" nls?
+map_token: "map" nls?
+struct_token: "struct" nls?
 
 eos: semi | nls
 semi: ";" NL*
@@ -265,9 +301,9 @@ nls: NL+
 NAME : /[a-zA-Z_]\w*/
 
 COMMENT : /\/\/[^\n]*\n/
-NL: COMMENT | /(\r?\n[\t ]*)+/ | /\/\*[^\n]*\n.*?\*\//s
+NL: COMMENT | /(\r?\n[\t ]*)+/ | /\/\*[^\n]*\n(\*+[^*\/]|[^*])*\*+\//s
 
 // %import common.WS_INLINE
 // %ignore WS_INLINE
-IGNORED: /[\t ]/ | /\/\*[^\n]*?\*\//
+IGNORED: /[\t ]/ | /\/\*(\*+[^*\/\n]|[^*\n])*\*+\//
 %ignore IGNORED
