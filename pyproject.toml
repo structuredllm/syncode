@@ -21,7 +21,7 @@ classifiers = [
 dependencies = [
     "fire",
     "interegular",
-    "regex==2024.11.6",
+    "regex==2025.9.1",
     "torch",
     "tqdm",
     "transformers==4.53.2",
